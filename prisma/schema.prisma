@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RequestStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum ConversationType {
+  direct
+  group
+}
+
+enum ParticipantRole {
+  leader
+  deputy
+  member
+}
+
+enum NotificationType {
+  FRIEND_REQUEST_RECEIVED @map("friend_request_received")
+  FRIEND_REQUEST_ACCEPTED @map("friend_request_accepted")
+  ADDED_TO_GROUP          @map("added_to_group")
+  REMOVED_FROM_GROUP      @map("removed_from_group")
+  GROUP_ROLE_CHANGED      @map("group_role_changed")
+  NEW_MESSAGE             @map("new_message")
+  MENTION                 @map("mention")
+}
+
+model Account {
+  id                  String    @id @default(uuid()) @db.Uuid
+  username            String    @unique @db.VarChar(50)
+  email               String    @unique @db.VarChar(255)
+  passwordHash        String?   @map("password_hash") @db.VarChar(255)
+  isEmailVerified     Boolean   @default(false) @map("is_email_verified")
+  emailVerifiedAt     DateTime? @map("email_verified_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  lastSeen            DateTime? @map("last_seen")
+
+  profile               Profile?
+  friendsAsAccount1     Friend[]               @relation("FriendAccount1")
+  friendsAsAccount2     Friend[]               @relation("FriendAccount2")
+  sentRequests          FriendRequest[]        @relation("SentRequests")
+  receivedRequests      FriendRequest[]        @relation("ReceivedRequests")
+  participations        Participant[]
+  notifications         Notification[]         @relation("NotificationAccount")
+  actorNotifications    Notification[]         @relation("NotificationActor")
+  refreshTokens         RefreshToken[]
+  deviceTokens          DeviceToken[]
+  blocksGiven           Block[]                @relation("Blocker")
+  blocksReceived        Block[]                @relation("Blocked")
+  passwordResetTokens   PasswordResetToken[]
+  emailVerificationOtps EmailVerificationOtp[]
+  authProviders         AuthProvider[]
+
+  @@map("accounts")
+}
+
+model Profile {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @unique @map("account_id") @db.Uuid
+  handle      String   @unique @db.VarChar(50)
+  displayName String?  @map("display_name") @db.VarChar(100)
+  avatarUrl   String?  @map("avatar_url")
+  coverUrl    String?  @map("cover_url")
+  bio         String?  @db.VarChar(150)
+  website     String?  @db.VarChar(255)
+  location    String?  @db.VarChar(100)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model AuthProvider {
+  id             String   @id @default(uuid()) @db.Uuid
+  accountId      String   @map("account_id") @db.Uuid
+  provider       String   @db.VarChar(20)
+  providerUserId String?  @map("provider_user_id") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([accountId])
+  @@map("auth_providers")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Friend {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId1 String  @map("account_id_1") @db.Uuid
+  accountId2 String  @map("account_id_2") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account1 Account @relation("FriendAccount1", fields: [accountId1], references: [id], onDelete: Cascade)
+  account2 Account @relation("FriendAccount2", fields: [accountId2], references: [id], onDelete: Cascade)
+
+  @@unique([accountId1, accountId2])
+  @@index([accountId1])
+  @@index([accountId2])
+  @@map("friends")
+}
+
+model FriendRequest {
+  id         String        @id @default(uuid()) @db.Uuid
+  senderId   String        @map("sender_id") @db.Uuid
+  receiverId String        @map("receiver_id") @db.Uuid
+  status     RequestStatus @default(pending)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  expiredAt  DateTime?     @map("expired_at")
+
+  sender   Account @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver Account @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([status, expiredAt])
+  @@map("friend_requests")
+}
+
+model Conversation {
+  id        String           @id @default(uuid()) @db.Uuid
+  type      ConversationType
+  title     String?          @db.VarChar(255)
+  avatarUrl String?          @map("avatar_url")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+  deletedAt DateTime?        @map("deleted_at")
+
+  participants Participant[]
+
+  @@map("conversations")
+}
+
+model Participant {
+  id                String          @id @default(uuid()) @db.Uuid
+  conversationId    String          @map("conversation_id") @db.Uuid
+  accountId         String          @map("account_id") @db.Uuid
+  role              ParticipantRole @default(member)
+  joinAt            DateTime        @default(now()) @map("join_at")
+  lastReadMessageId String?         @map("last_read_message_id") @db.VarChar(255)
+  hiddenAt          DateTime?       @map("hidden_at")
+  mutedUntil        DateTime?       @map("muted_until")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  account      Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, accountId])
+  @@index([accountId])
+  @@map("participants")
+}
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  actorId     String   @map("actor_id") @db.Uuid
+  type        NotificationType
+  referenceId String?  @map("reference_id") @db.Uuid
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  account Account @relation("NotificationAccount", fields: [accountId], references: [id], onDelete: Cascade)
+  actor   Account @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, isRead])
+  @@map("notifications")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  accountId String   @map("account_id") @db.Uuid
+  token     String   @unique
+  platform  String   @db.VarChar(20)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("device_tokens")
+}
+
+model Block {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  blocker Account @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked Account @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@map("blocks")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @map("account_id") @db.Uuid
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model EmailVerificationOtp {
+  id        String    @id @default(uuid()) @db.Uuid
+  accountId String    @unique @map("account_id") @db.Uuid
+  otpHash   String    @map("otp_hash")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_otps")
+}
