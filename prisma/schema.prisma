@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  username     String    @unique @db.VarChar(50)
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  email        String    @unique @db.VarChar(255)
+  authProvider String    @map("auth_provider") @db.VarChar(20)
+  providerId   String?   @map("provider_id") @db.VarChar(255)
+  avatarUrl    String?   @map("avatar_url")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastSeen     DateTime? @map("last_seen")
+
+  friendsAsUser1     Friend[]        @relation("FriendUser1")
+  friendsAsUser2     Friend[]        @relation("FriendUser2")
+  sentRequests       FriendRequest[] @relation("SentRequests")
+  receivedRequests   FriendRequest[] @relation("ReceivedRequests")
+  participations     Participant[]
+  notifications      Notification[]  @relation("NotificationUser")
+  actorNotifications Notification[]  @relation("NotificationActor")
+
+  @@unique([authProvider, providerId])
+  @@map("users")
+}
+
+model Friend {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId1   String   @map("user_id_1") @db.Uuid
+  userId2   String   @map("user_id_2") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user1 User @relation("FriendUser1", fields: [userId1], references: [id])
+  user2 User @relation("FriendUser2", fields: [userId2], references: [id])
+
+  @@map("friends")
+}
+
+model FriendRequest {
+  id         String   @id @default(uuid()) @db.Uuid
+  senderId   String   @map("sender_id") @db.Uuid
+  receiverId String   @map("receiver_id") @db.Uuid
+  status     String   @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  sender   User @relation("SentRequests", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@map("friend_requests")
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  type      String   @db.VarChar(20)
+  title     String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  participants Participant[]
+
+  @@map("conversations")
+}
+
+model Participant {
+  id                String   @id @default(uuid()) @db.Uuid
+  conversationId    String   @map("conversation_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  role              String   @db.VarChar(20)
+  joinAt            DateTime @default(now()) @map("join_at")
+  lastReadMessageId String?  @map("last_read_message_id") @db.VarChar(255)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@map("participants")
+}
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  actorId     String   @map("actor_id") @db.Uuid
+  type        String   @db.VarChar(50)
+  referenceId String?  @map("reference_id") @db.Uuid
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user  User @relation("NotificationUser", fields: [userId], references: [id])
+  actor User @relation("NotificationActor", fields: [actorId], references: [id])
+
+  @@map("notifications")
+}
