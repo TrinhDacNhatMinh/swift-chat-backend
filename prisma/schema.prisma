@@ -24,9 +24,22 @@ model User {
   participations     Participant[]
   notifications      Notification[]  @relation("NotificationUser")
   actorNotifications Notification[]  @relation("NotificationActor")
+  refreshTokens      RefreshToken[]
 
   @@unique([authProvider, providerId])
   @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
 }
 
 model Friend {
