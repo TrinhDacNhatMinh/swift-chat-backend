@@ -1,0 +1,13 @@
+import { Module } from '@nestjs/common';
+import { ChatGateway } from './chat.gateway';
+import { AuthModule } from '../auth/auth.module';
+import { WsJwtGuard } from '../auth/guards/ws-jwt.guard';
+import { ConversationsModule } from '../conversations/conversations.module';
+import { MessagesModule } from '../messages/messages.module';
+import { FriendsModule } from '../friends/friends.module';
+
+@Module({
+  imports: [AuthModule, ConversationsModule, MessagesModule, FriendsModule],
+  providers: [ChatGateway, WsJwtGuard],
+})
+export class ChatModule {}
