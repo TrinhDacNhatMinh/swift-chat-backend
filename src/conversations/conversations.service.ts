@@ -161,4 +161,15 @@ export class ConversationsService {
       orderBy: { updatedAt: 'desc' },
     });
   }
+  async isParticipant(userId: string, conversationId: string): Promise<boolean> {
+    const participant = await this.prisma.participant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+    return !!participant;
+  }
 }
