@@ -11,6 +11,9 @@ import { FriendsModule } from './friends/friends.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { MessagesModule } from './messages/messages.module';
 import { ChatModule } from './chat/chat.module';
+import { UploadModule } from './upload/upload.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { FcmModule } from './fcm/fcm.module';
 
 @Module({
   imports: [
@@ -27,6 +30,9 @@ import { ChatModule } from './chat/chat.module';
     ConversationsModule,
     MessagesModule,
     ChatModule,
+    UploadModule,
+    NotificationsModule,
+    FcmModule,
   ],
   controllers: [AppController],
   providers: [AppService],
