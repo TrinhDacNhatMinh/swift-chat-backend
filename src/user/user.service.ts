@@ -84,6 +84,13 @@ export class UserService {
     });
   }
 
+  async updateLastSeen(userId: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { lastSeen: new Date() },
+    });
+  }
+
   async getUserProfile(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
