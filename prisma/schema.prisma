@@ -25,6 +25,7 @@ model User {
   notifications      Notification[]  @relation("NotificationUser")
   actorNotifications Notification[]  @relation("NotificationActor")
   refreshTokens      RefreshToken[]
+  deviceTokens       DeviceToken[]
 
   @@unique([authProvider, providerId])
   @@map("users")
@@ -109,4 +110,16 @@ model Notification {
   actor User @relation("NotificationActor", fields: [actorId], references: [id])
 
   @@map("notifications")
+}
+
+model DeviceToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  platform  String   @db.VarChar(20)   // 'android', 'ios', 'web'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("device_tokens")
 }
