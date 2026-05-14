@@ -1,0 +1,114 @@
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import * as admin from 'firebase-admin';
+import { PrismaService } from '../prisma/prisma.service';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
+import * as fs from 'fs';
+import * as path from 'path';
+
+@Injectable()
+export class FcmService {
+  private readonly logger = new Logger(FcmService.name);
+  private isInitialized = false;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redisClient: Redis,
+  ) {
+    this.initializeFirebase();
+  }
+
+  private initializeFirebase() {
+    try {
+      const serviceAccountPath = path.join(process.cwd(), 'serviceAccount.json');
+      if (fs.existsSync(serviceAccountPath)) {
+        admin.initializeApp({
+          credential: admin.credential.cert(require(serviceAccountPath)),
+        });
+        this.isInitialized = true;
+        this.logger.log('Firebase Admin SDK initialized successfully');
+      } else {
+        this.logger.warn('serviceAccount.json not found. FCM push notifications are disabled. Please add the file to enable offline push notifications.');
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize Firebase Admin', error);
+    }
+  }
+
+  async registerDevice(userId: string, token: string, platform: string) {
+    return this.prisma.deviceToken.upsert({
+      where: { token },
+      update: { userId, platform },
+      create: { userId, token, platform },
+    });
+  }
+
+  async removeDevice(token: string) {
+    try {
+      await this.prisma.deviceToken.delete({ where: { token } });
+    } catch (error) {
+      // Ignore if not exists
+    }
+  }
+
+  async sendPushToUser(userId: string, title: string, body: string, data?: any) {
+    if (!this.isInitialized) return;
+
+    const devices = await this.prisma.deviceToken.findMany({
+      where: { userId },
+    });
+
+    if (devices.length === 0) return;
+
+    const tokens = devices.map(d => d.token);
+    
+    try {
+      const response = await admin.messaging().sendEachForMulticast({
+        tokens,
+        notification: {
+          title,
+          body,
+        },
+        data: data || {},
+      });
+
+      // Cleanup invalid tokens
+      response.responses.forEach((res, idx) => {
+        if (!res.success && res.error) {
+          if (res.error.code === 'messaging/invalid-registration-token' ||
+              res.error.code === 'messaging/registration-token-not-registered') {
+            this.removeDevice(tokens[idx]);
+          }
+        }
+      });
+    } catch (error) {
+      this.logger.error(`Error sending push to user ${userId}`, error);
+    }
+  }
+
+  async sendPushToOfflineParticipants(
+    conversationId: string,
+    senderId: string,
+    senderName: string,
+    messageContent: string,
+  ) {
+    if (!this.isInitialized) return;
+
+    const participants = await this.prisma.participant.findMany({
+      where: { conversationId, userId: { not: senderId } },
+      select: { userId: true },
+    });
+
+    for (const p of participants) {
+      // Check Redis presence
+      const isOnline = await this.redisClient.get(`presence:${p.userId}`);
+      if (isOnline) continue; // Online users receive via WebSocket
+
+      // Send push to offline user
+      await this.sendPushToUser(p.userId, senderName, messageContent, {
+        conversationId,
+        type: 'new_message',
+      });
+    }
+  }
+}
