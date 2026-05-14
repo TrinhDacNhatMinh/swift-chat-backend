@@ -27,6 +27,9 @@ export class Message {
 
   @Prop({ default: false })
   is_deleted: boolean;
+
+  @Prop({ default: false })
+  is_edited: boolean;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

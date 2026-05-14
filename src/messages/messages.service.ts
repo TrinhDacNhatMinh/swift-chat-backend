@@ -41,4 +41,24 @@ export class MessagesService {
       .limit(limit)
       .exec();
   }
+
+  async softDelete(messageId: string, senderId: string): Promise<MessageDocument | null> {
+    return this.messageModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(messageId), sender_id: senderId }, // Only sender can delete
+      { is_deleted: true, content: '' }, // Erase content, keep record
+      { new: true },
+    );
+  }
+
+  async editMessage(messageId: string, senderId: string, newContent: string): Promise<MessageDocument | null> {
+    return this.messageModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(messageId),
+        sender_id: senderId,
+        is_deleted: false, // Cannot edit deleted messages
+      },
+      { content: newContent, is_edited: true },
+      { new: true },
+    );
+  }
 }
