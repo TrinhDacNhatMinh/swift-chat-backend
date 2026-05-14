@@ -33,9 +33,16 @@ import { MessagesService } from '../messages/messages.service';
 import { FriendsService } from '../friends/friends.service';
 import { CreateMessageDto } from '../messages/dto/create-message.dto';
 import { RoomEventDto } from './dto/room-event.dto';
+import { DeleteMessageDto } from './dto/delete-message.dto';
+import { EditMessageDto } from './dto/edit-message.dto';
+import { MarkReadDto } from './dto/mark-read.dto';
+import { UserService } from '../user/user.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { FcmService } from '../fcm/fcm.service';
 
 const REDIS_PRESENCE_PREFIX = 'presence:';
 const REDIS_CONNECTION_COUNT_PREFIX = 'conn_count:';
+const PRESENCE_TTL_SECONDS = 120; // 2 minutes — heartbeat must refresh before expiry
 
 @WebSocketGateway({
   namespace: '/chat',
@@ -63,13 +70,17 @@ export class ChatGateway
     private readonly conversationsService: ConversationsService,
     private readonly messagesService: MessagesService,
     private readonly friendsService: FriendsService,
+    private readonly userService: UserService,
+    private readonly notificationsService: NotificationsService,
+    private readonly fcmService: FcmService,
   ) {}
 
   afterInit(server: Server) {
     this.logger.log('ChatGateway initialized');
+    this.notificationsService.setServer(server);
 
     // Handshake middleware — reject unauthenticated connections early
-    server.use((socket: Socket, next) => {
+    server.use(async (socket: Socket, next) => {
       const token = this.extractToken(socket);
 
       if (!token) {
@@ -82,6 +93,15 @@ export class ChatGateway
         });
         socket.data.userId = payload.sub;
         socket.data.email = payload.email;
+
+        // Fix #4: Load username from DB so FCM push notifications use real name
+        try {
+          const user = await this.userService.findById(payload.sub);
+          socket.data.username = user.username;
+        } catch {
+          socket.data.username = payload.email; // Fallback to email
+        }
+
         next();
       } catch {
         next(new Error('Invalid or expired authentication token'));
@@ -99,14 +119,18 @@ export class ChatGateway
     // Join the personal user room for unified addressing across devices
     await client.join(`user:${userId}`);
 
-    // Handle presence tracking
+    // Handle presence tracking with TTL safety net (Bug 3 fix)
     const countKey = `${REDIS_CONNECTION_COUNT_PREFIX}${userId}`;
     const newCount = await this.redisClient.incr(countKey);
+    await this.redisClient.expire(countKey, PRESENCE_TTL_SECONDS);
     
     // If it's the first connection, mark as online and notify friends
     if (newCount === 1) {
-      await this.redisClient.set(`${REDIS_PRESENCE_PREFIX}${userId}`, 'online');
+      await this.redisClient.set(`${REDIS_PRESENCE_PREFIX}${userId}`, 'online', 'EX', PRESENCE_TTL_SECONDS);
       await this.broadcastPresenceToFriends(userId, 'online');
+    } else {
+      // Refresh TTL on presence key for subsequent connections
+      await this.redisClient.expire(`${REDIS_PRESENCE_PREFIX}${userId}`, PRESENCE_TTL_SECONDS);
     }
   }
 
@@ -127,6 +151,13 @@ export class ChatGateway
       await this.redisClient.del(countKey); // Clean up counter
       await this.redisClient.del(`${REDIS_PRESENCE_PREFIX}${userId}`);
       await this.broadcastPresenceToFriends(userId, 'offline');
+
+      // Bug 2 fix: Record last seen timestamp
+      try {
+        await this.userService.updateLastSeen(userId);
+      } catch (error) {
+        this.logger.error(`Failed to update lastSeen for user ${userId}:`, error);
+      }
     }
   }
 
@@ -165,6 +196,35 @@ export class ChatGateway
     return { status: 'success', conversationId };
   }
 
+  // Feature 1: Typing Indicator
+  @SubscribeMessage('chat:typing')
+  async handleTyping(
+    @MessageBody() dto: RoomEventDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId;
+    const isParticipant = await this.conversationsService.isParticipant(userId, dto.conversationId);
+    if (!isParticipant) return;
+
+    // Broadcast to room except the sender
+    client.to(`conversation:${dto.conversationId}`).emit('chat:user_typing', {
+      conversationId: dto.conversationId,
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  @SubscribeMessage('chat:stop_typing')
+  async handleStopTyping(
+    @MessageBody() dto: RoomEventDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.to(`conversation:${dto.conversationId}`).emit('chat:user_stop_typing', {
+      conversationId: dto.conversationId,
+      userId: client.data.userId,
+    });
+  }
+
   // Step 5: Send and Broadcast Message Logic
   @SubscribeMessage('chat:send_message')
   async handleSendMessage(
@@ -173,6 +233,12 @@ export class ChatGateway
   ) {
     const userId = client.data.userId;
     const conversationId = dto.conversationId;
+
+    // Fix #2: Verify conversation exists before any operation
+    const conversationValid = await this.conversationsService.conversationExists(conversationId);
+    if (!conversationValid) {
+      throw new WsException('Conversation not found');
+    }
 
     // Verify authorization again for security
     const isParticipant = await this.conversationsService.isParticipant(
@@ -187,6 +253,9 @@ export class ChatGateway
     // 1. Persist message to database first
     const savedMessage = await this.messagesService.create(userId, dto);
 
+    // Bug 1 fix: Update conversation timestamp so list sorts correctly
+    await this.conversationsService.updateTimestamp(conversationId);
+
     // Construct response payload including client's temp ID for optimistic UI correlation
     const responsePayload = {
       ...savedMessage.toObject(),
@@ -198,7 +267,93 @@ export class ChatGateway
       .to(`conversation:${conversationId}`)
       .emit('chat:receive_message', responsePayload);
 
+    // Feature 4: Send offline push notification (fire-and-forget)
+    // Fix #4: Use loaded username from handshake instead of potentially undefined value
+    this.fcmService
+      .sendPushToOfflineParticipants(conversationId, userId, client.data.username || client.data.email || 'Someone', dto.content)
+      .catch((err) => this.logger.error('FCM push failed:', err));
+
     return { status: 'sent', messageId: savedMessage._id };
+  }
+
+  // Feature 5: Delete Message
+  @SubscribeMessage('chat:delete_message')
+  async handleDeleteMessage(
+    @MessageBody() dto: DeleteMessageDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId;
+    const deleted = await this.messagesService.softDelete(dto.messageId, userId);
+
+    if (!deleted) {
+      throw new WsException('Message not found or you are not the sender');
+    }
+
+    this.server.to(`conversation:${dto.conversationId}`).emit('chat:message_deleted', {
+      conversationId: dto.conversationId,
+      messageId: dto.messageId,
+      deletedBy: userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { status: 'deleted', messageId: dto.messageId };
+  }
+
+  // Feature 6: Edit Message
+  @SubscribeMessage('chat:edit_message')
+  async handleEditMessage(
+    @MessageBody() dto: EditMessageDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId;
+    const edited = await this.messagesService.editMessage(dto.messageId, userId, dto.content);
+
+    if (!edited) {
+      throw new WsException('Message not found, already deleted, or you are not the sender');
+    }
+
+    this.server.to(`conversation:${dto.conversationId}`).emit('chat:message_edited', {
+      conversationId: dto.conversationId,
+      messageId: dto.messageId,
+      content: dto.content,
+      editedBy: userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { status: 'edited', messageId: dto.messageId };
+  }
+
+  // Feature 2: Read Receipts
+  @SubscribeMessage('chat:mark_read')
+  async handleMarkRead(
+    @MessageBody() dto: MarkReadDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId;
+    await this.conversationsService.markAsRead(userId, dto.conversationId, dto.messageId);
+    
+    // Broadcast read receipt to other participants
+    client.to(`conversation:${dto.conversationId}`).emit('chat:read_receipt', {
+      conversationId: dto.conversationId,
+      userId,
+      messageId: dto.messageId,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { status: 'success' };
+  }
+
+  // Bug 3 fix: Heartbeat to keep presence alive — client should emit every 30-60s
+  @SubscribeMessage('chat:heartbeat')
+  async handleHeartbeat(@ConnectedSocket() client: Socket) {
+    const userId = client.data.userId as string;
+    if (!userId) return;
+
+    const countKey = `${REDIS_CONNECTION_COUNT_PREFIX}${userId}`;
+    await this.redisClient.expire(countKey, PRESENCE_TTL_SECONDS);
+    await this.redisClient.expire(`${REDIS_PRESENCE_PREFIX}${userId}`, PRESENCE_TTL_SECONDS);
+
+    return { status: 'ok' };
   }
 
   // Helper for Presence Broadcasting
@@ -207,7 +362,7 @@ export class ChatGateway
     status: 'online' | 'offline',
   ) {
     try {
-      const friends = await this.friendsService.getFriends(userId);
+      const friends = await this.friendsService.getAllFriends(userId);
       const payload = {
         userId,
         status,
