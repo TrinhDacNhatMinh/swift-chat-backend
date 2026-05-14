@@ -139,7 +139,7 @@ export class ConversationsService {
     });
   }
 
-  async getUserConversations(userId: string) {
+  async getUserConversations(userId: string, limit: number = 20, offset: number = 0) {
     const userParticipations = await this.prisma.participant.findMany({
       where: { userId },
       select: { conversationId: true },
@@ -147,20 +147,43 @@ export class ConversationsService {
 
     const conversationIds = userParticipations.map((p) => p.conversationId);
 
-    return this.prisma.conversation.findMany({
-      where: { id: { in: conversationIds } },
-      include: {
-        participants: {
-          include: {
-            user: {
-              select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+    const [conversations, total] = await Promise.all([
+      this.prisma.conversation.findMany({
+        where: { id: { in: conversationIds } },
+        include: {
+          participants: {
+            include: {
+              user: {
+                select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+              },
             },
           },
         },
-      },
-      orderBy: { updatedAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.conversation.count({
+        where: { id: { in: conversationIds } },
+      }),
+    ]);
+
+    return { data: conversations, total, limit, offset };
+  }
+
+  async conversationExists(conversationId: string): Promise<boolean> {
+    const conversation = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+    return !!conversation;
+  }
+  async updateTimestamp(conversationId: string): Promise<void> {
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
     });
   }
+
   async isParticipant(userId: string, conversationId: string): Promise<boolean> {
     const participant = await this.prisma.participant.findUnique({
       where: {
@@ -171,5 +194,27 @@ export class ConversationsService {
       },
     });
     return !!participant;
+  }
+
+  async markAsRead(userId: string, conversationId: string, messageId: string) {
+    return this.prisma.participant.update({
+      where: {
+        conversationId_userId: { conversationId, userId },
+      },
+      data: { lastReadMessageId: messageId },
+    });
+  }
+
+  async getReadReceipts(conversationId: string) {
+    return this.prisma.participant.findMany({
+      where: { conversationId },
+      select: {
+        userId: true,
+        lastReadMessageId: true,
+        user: {
+          select: { id: true, username: true, avatarUrl: true },
+        },
+      },
+    });
   }
 }
