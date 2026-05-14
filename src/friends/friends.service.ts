@@ -187,25 +187,21 @@ export class FriendsService {
   }
 
   /**
-   * Returns ALL friends as a flat array (no pagination).
+   * Returns friend IDs in pages to avoid loading thousands of records into memory.
    * Used internally by ChatGateway for presence broadcasting.
+   * Callers iterate pages until an empty array is returned.
    */
-  async getAllFriends(userId: string) {
+  async getFriendIdsBatch(userId: string, skip: number, take: number = 100): Promise<string[]> {
     const friendships = await this.prisma.friend.findMany({
       where: {
         OR: [{ userId1: userId }, { userId2: userId }],
       },
-      include: {
-        user1: {
-          select: { id: true, username: true, avatarUrl: true },
-        },
-        user2: {
-          select: { id: true, username: true, avatarUrl: true },
-        },
-      },
+      select: { userId1: true, userId2: true },
+      skip,
+      take,
     });
 
-    return friendships.map((f) => (f.userId1 === userId ? f.user2 : f.user1));
+    return friendships.map((f) => (f.userId1 === userId ? f.userId2 : f.userId1));
   }
 
   async removeFriend(userId: string, targetFriendId: string) {
