@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateFriendRequestDto } from './dto/create-friend-request.dto';
 import { RespondFriendRequestDto } from './dto/respond-friend-request.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -42,8 +44,8 @@ export class FriendsController {
   }
 
   @Get('friends')
-  getFriends(@CurrentUser() user: any) {
-    return this.friendsService.getFriends(user.id);
+  getFriends(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
+    return this.friendsService.getFriends(user.id, pagination.limit, pagination.offset);
   }
 
   @Delete('friends/:userId')

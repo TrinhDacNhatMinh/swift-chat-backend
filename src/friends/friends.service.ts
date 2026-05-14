@@ -7,10 +7,15 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendRequestStatus } from './enums/friend-request-status.enum';
 import { FriendRequestAction } from './dto/respond-friend-request.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/enums/notification-type.enum';
 
 @Injectable()
 export class FriendsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
     if (senderId === receiverId) {
@@ -55,7 +60,7 @@ export class FriendsService {
     }
 
     // Upsert: re-activate a previously rejected request, or create new
-    return this.prisma.friendRequest.upsert({
+    const req = await this.prisma.friendRequest.upsert({
       where: {
         senderId_receiverId: { senderId, receiverId },
       },
@@ -68,6 +73,16 @@ export class FriendsService {
         status: FriendRequestStatus.PENDING,
       },
     });
+
+    // Notify receiver
+    await this.notificationsService.create(
+      receiverId,
+      senderId,
+      NotificationType.FRIEND_REQUEST_RECEIVED,
+      req.id,
+    );
+
+    return req;
   }
 
   async getPendingRequests(userId: string) {
@@ -115,7 +130,7 @@ export class FriendsService {
     }
 
     // ACCEPTED — use a transaction to ensure atomicity
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const updatedRequest = await tx.friendRequest.update({
         where: { id: requestId },
         data: { status: FriendRequestStatus.ACCEPTED },
@@ -130,24 +145,66 @@ export class FriendsService {
 
       return updatedRequest;
     });
+
+    // Notify sender that their request was accepted
+    await this.notificationsService.create(
+      request.senderId,
+      currentUserId,
+      NotificationType.FRIEND_REQUEST_ACCEPTED,
+      request.id,
+    );
+
+    return result;
   }
 
-  async getFriends(userId: string) {
+  async getFriends(userId: string, limit: number = 20, offset: number = 0) {
+    const where = {
+      OR: [{ userId1: userId }, { userId2: userId }],
+    };
+
+    const [friendships, total] = await Promise.all([
+      this.prisma.friend.findMany({
+        where,
+        include: {
+          user1: {
+            select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+          },
+          user2: {
+            select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      this.prisma.friend.count({ where }),
+    ]);
+
+    // Return only the OTHER user in each friendship
+    const data = friendships.map((f) => (f.userId1 === userId ? f.user2 : f.user1));
+
+    return { data, total, limit, offset };
+  }
+
+  /**
+   * Returns ALL friends as a flat array (no pagination).
+   * Used internally by ChatGateway for presence broadcasting.
+   */
+  async getAllFriends(userId: string) {
     const friendships = await this.prisma.friend.findMany({
       where: {
         OR: [{ userId1: userId }, { userId2: userId }],
       },
       include: {
         user1: {
-          select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+          select: { id: true, username: true, avatarUrl: true },
         },
         user2: {
-          select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+          select: { id: true, username: true, avatarUrl: true },
         },
       },
     });
 
-    // Return only the OTHER user in each friendship
     return friendships.map((f) => (f.userId1 === userId ? f.user2 : f.user1));
   }
 
