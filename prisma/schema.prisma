@@ -6,6 +6,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum RequestStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum ConversationType {
+  direct
+  group
+}
+
+enum ParticipantRole {
+  admin
+  member
+}
+
 model User {
   id           String    @id @default(uuid()) @db.Uuid
   username     String    @unique @db.VarChar(50)
@@ -56,12 +72,12 @@ model Friend {
 }
 
 model FriendRequest {
-  id         String   @id @default(uuid()) @db.Uuid
-  senderId   String   @map("sender_id") @db.Uuid
-  receiverId String   @map("receiver_id") @db.Uuid
-  status     String   @db.VarChar(20)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id         String        @id @default(uuid()) @db.Uuid
+  senderId   String        @map("sender_id") @db.Uuid
+  receiverId String        @map("receiver_id") @db.Uuid
+  status     RequestStatus @default(pending)
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
 
   sender   User @relation("SentRequests", fields: [senderId], references: [id])
   receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
@@ -71,11 +87,11 @@ model FriendRequest {
 }
 
 model Conversation {
-  id        String   @id @default(uuid()) @db.Uuid
-  type      String   @db.VarChar(20)
-  title     String?  @db.VarChar(255)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id        String           @id @default(uuid()) @db.Uuid
+  type      ConversationType
+  title     String?          @db.VarChar(255)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
   participants Participant[]
 
@@ -83,12 +99,12 @@ model Conversation {
 }
 
 model Participant {
-  id                String   @id @default(uuid()) @db.Uuid
-  conversationId    String   @map("conversation_id") @db.Uuid
-  userId            String   @map("user_id") @db.Uuid
-  role              String   @db.VarChar(20)
-  joinAt            DateTime @default(now()) @map("join_at")
-  lastReadMessageId String?  @map("last_read_message_id") @db.VarChar(255)
+  id                String          @id @default(uuid()) @db.Uuid
+  conversationId    String          @map("conversation_id") @db.Uuid
+  userId            String          @map("user_id") @db.Uuid
+  role              ParticipantRole @default(member)
+  joinAt            DateTime        @default(now()) @map("join_at")
+  lastReadMessageId String?         @map("last_read_message_id") @db.VarChar(255)
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   user         User         @relation(fields: [userId], references: [id])
@@ -116,7 +132,7 @@ model DeviceToken {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   token     String   @unique
-  platform  String   @db.VarChar(20)   // 'android', 'ios', 'web'
+  platform  String   @db.VarChar(20) // 'android', 'ios', 'web'
   createdAt DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
