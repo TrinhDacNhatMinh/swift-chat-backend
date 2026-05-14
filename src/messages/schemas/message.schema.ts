@@ -13,10 +13,10 @@ export enum MessageType {
 @Schema({ timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
 export class Message {
   // Store UUIDs as strings because this collection references PostgreSQL across databases
-  @Prop({ required: true, type: String })
+  @Prop({ required: true, type: String, index: true })
   conversation_id: string;
 
-  @Prop({ required: true, type: String })
+  @Prop({ required: true, type: String, index: true })
   sender_id: string;
 
   @Prop({ required: true, type: String })
@@ -30,6 +30,10 @@ export class Message {
 
   @Prop({ default: false })
   is_edited: boolean;
+
+  // Stores the deletion timestamp for audit purposes — content is never erased
+  @Prop({ type: Date, default: null })
+  deleted_at: Date | null;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

@@ -44,8 +44,8 @@ export class MessagesService {
 
   async softDelete(messageId: string, senderId: string): Promise<MessageDocument | null> {
     return this.messageModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(messageId), sender_id: senderId }, // Only sender can delete
-      { is_deleted: true, content: '' }, // Erase content, keep record
+      { _id: new Types.ObjectId(messageId), sender_id: senderId },
+      { is_deleted: true, deleted_at: new Date() }, // Preserve content for audit trail
       { new: true },
     );
   }
