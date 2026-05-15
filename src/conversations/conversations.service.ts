@@ -140,16 +140,12 @@ export class ConversationsService {
   }
 
   async getUserConversations(userId: string, limit: number = 20, offset: number = 0) {
-    const userParticipations = await this.prisma.participant.findMany({
-      where: { userId },
-      select: { conversationId: true },
-    });
-
-    const conversationIds = userParticipations.map((p) => p.conversationId);
+    // Single JOIN query — avoids fetching a large ID array into Node.js memory first
+    const participantFilter = { participants: { some: { userId } } };
 
     const [conversations, total] = await Promise.all([
       this.prisma.conversation.findMany({
-        where: { id: { in: conversationIds } },
+        where: participantFilter,
         include: {
           participants: {
             include: {
@@ -163,9 +159,7 @@ export class ConversationsService {
         take: limit,
         skip: offset,
       }),
-      this.prisma.conversation.count({
-        where: { id: { in: conversationIds } },
-      }),
+      this.prisma.conversation.count({ where: participantFilter }),
     ]);
 
     return { data: conversations, total, limit, offset };
