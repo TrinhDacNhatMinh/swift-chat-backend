@@ -99,16 +99,21 @@ export class FcmService {
       select: { userId: true },
     });
 
-    for (const p of participants) {
-      // Check Redis presence
-      const isOnline = await this.redisClient.get(`presence:${p.userId}`);
-      if (isOnline) continue; // Online users receive via WebSocket
+    if (participants.length === 0) return;
 
-      // Send push to offline user
-      await this.sendPushToUser(p.userId, senderName, messageContent, {
-        conversationId,
-        type: 'new_message',
-      });
-    }
+    // Single MGET call instead of N sequential GETs — O(1) round-trips to Redis
+    const presenceKeys = participants.map((p) => `presence:${p.userId}`);
+    const presenceResults = await this.redisClient.mget(presenceKeys);
+
+    const pushPromises = participants
+      .filter((_, idx) => !presenceResults[idx]) // Keep only offline users
+      .map((p) =>
+        this.sendPushToUser(p.userId, senderName, messageContent, {
+          conversationId,
+          type: 'new_message',
+        }),
+      );
+
+    await Promise.allSettled(pushPromises);
   }
 }
