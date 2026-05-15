@@ -3,18 +3,25 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FriendRequestStatus } from './enums/friend-request-status.enum';
 import { FriendRequestAction } from './dto/respond-friend-request.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/enums/notification-type.enum';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
+
+const FRIENDS_CACHE_TTL = 300; // 5 minutes
+const friendsCacheKey = (userId: string) => `friends_list:${userId}`;
 
 @Injectable()
 export class FriendsService {
   constructor(
-    private prisma: PrismaService,
-    private notificationsService: NotificationsService,
+    private readonly prisma: PrismaService,
+    private readonly notificationsService: NotificationsService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async sendRequest(senderId: string, receiverId: string) {
@@ -146,6 +153,12 @@ export class FriendsService {
       return updatedRequest;
     });
 
+    // Invalidate friends list cache for both users
+    await Promise.all([
+      this.redis.del(friendsCacheKey(request.senderId)),
+      this.redis.del(friendsCacheKey(request.receiverId)),
+    ]);
+
     // Notify sender that their request was accepted
     await this.notificationsService.create(
       request.senderId,
@@ -158,6 +171,13 @@ export class FriendsService {
   }
 
   async getFriends(userId: string, limit: number = 20, offset: number = 0) {
+    // Only cache the first page (default view) — paginated pages are infrequent
+    const isFirstPage = offset === 0 && limit === 20;
+    if (isFirstPage) {
+      const cached = await this.redis.get(friendsCacheKey(userId));
+      if (cached) return JSON.parse(cached);
+    }
+
     const where = {
       OR: [{ userId1: userId }, { userId2: userId }],
     };
@@ -182,8 +202,13 @@ export class FriendsService {
 
     // Return only the OTHER user in each friendship
     const data = friendships.map((f) => (f.userId1 === userId ? f.user2 : f.user1));
+    const result = { data, total, limit, offset };
 
-    return { data, total, limit, offset };
+    if (isFirstPage) {
+      await this.redis.set(friendsCacheKey(userId), JSON.stringify(result), 'EX', FRIENDS_CACHE_TTL);
+    }
+
+    return result;
   }
 
   /**
@@ -221,6 +246,12 @@ export class FriendsService {
     await this.prisma.friend.delete({
       where: { id: friendship.id },
     });
+
+    // Invalidate friends list cache for both users
+    await Promise.all([
+      this.redis.del(friendsCacheKey(userId)),
+      this.redis.del(friendsCacheKey(targetFriendId)),
+    ]);
 
     return { success: true, message: 'Friend removed successfully' };
   }

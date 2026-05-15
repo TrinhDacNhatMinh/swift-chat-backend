@@ -1,10 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../redis/redis.module';
+
+const USER_PROFILE_CACHE_TTL = 3600; // 1 hour
+const USER_PROFILE_CACHE_KEY = (id: string) => `user_profile:${id}`;
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {}
 
   async create(data: {
     email: string;
@@ -53,7 +61,7 @@ export class UserService {
   }
 
   async updateProfile(id: string, data: UpdateProfileDto) {
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data,
       select: {
@@ -64,6 +72,11 @@ export class UserService {
         createdAt: true,
       },
     });
+
+    // Invalidate stale cache so next read fetches fresh data
+    await this.redis.del(USER_PROFILE_CACHE_KEY(id));
+
+    return updated;
   }
 
   async searchUsers(query: string, currentUserId: string) {
@@ -89,9 +102,16 @@ export class UserService {
       where: { id: userId },
       data: { lastSeen: new Date() },
     });
+
+    // lastSeen changes on every disconnect — invalidate so profile reflects accurate time
+    await this.redis.del(USER_PROFILE_CACHE_KEY(userId));
   }
 
   async getUserProfile(id: string) {
+    // Cache-aside: return cached value if available
+    const cached = await this.redis.get(USER_PROFILE_CACHE_KEY(id));
+    if (cached) return JSON.parse(cached);
+
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -107,6 +127,14 @@ export class UserService {
       throw new NotFoundException('User not found');
     }
 
+    await this.redis.set(
+      USER_PROFILE_CACHE_KEY(id),
+      JSON.stringify(user),
+      'EX',
+      USER_PROFILE_CACHE_TTL,
+    );
+
     return user;
   }
 }
+
