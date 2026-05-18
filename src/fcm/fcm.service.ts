@@ -20,7 +20,10 @@ export class FcmService {
 
   private initializeFirebase() {
     try {
-      const serviceAccountPath = path.join(process.cwd(), 'serviceAccount.json');
+      const serviceAccountPath = path.join(
+        process.cwd(),
+        'serviceAccount.json',
+      );
       if (fs.existsSync(serviceAccountPath)) {
         admin.initializeApp({
           credential: admin.credential.cert(require(serviceAccountPath)),
@@ -28,7 +31,9 @@ export class FcmService {
         this.isInitialized = true;
         this.logger.log('Firebase Admin SDK initialized successfully');
       } else {
-        this.logger.warn('serviceAccount.json not found. FCM push notifications are disabled. Please add the file to enable offline push notifications.');
+        this.logger.warn(
+          'serviceAccount.json not found. FCM push notifications are disabled. Please add the file to enable offline push notifications.',
+        );
       }
     } catch (error) {
       this.logger.error('Failed to initialize Firebase Admin', error);
@@ -51,7 +56,12 @@ export class FcmService {
     }
   }
 
-  async sendPushToUser(userId: string, title: string, body: string, data?: any) {
+  async sendPushToUser(
+    userId: string,
+    title: string,
+    body: string,
+    data?: any,
+  ) {
     if (!this.isInitialized) return;
 
     const devices = await this.prisma.deviceToken.findMany({
@@ -60,8 +70,8 @@ export class FcmService {
 
     if (devices.length === 0) return;
 
-    const tokens = devices.map(d => d.token);
-    
+    const tokens = devices.map((d) => d.token);
+
     try {
       const response = await admin.messaging().sendEachForMulticast({
         tokens,
@@ -75,8 +85,10 @@ export class FcmService {
       // Cleanup invalid tokens
       response.responses.forEach((res, idx) => {
         if (!res.success && res.error) {
-          if (res.error.code === 'messaging/invalid-registration-token' ||
-              res.error.code === 'messaging/registration-token-not-registered') {
+          if (
+            res.error.code === 'messaging/invalid-registration-token' ||
+            res.error.code === 'messaging/registration-token-not-registered'
+          ) {
             this.removeDevice(tokens[idx]);
           }
         }

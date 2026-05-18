@@ -51,4 +51,3 @@ export class DatabaseModule implements OnModuleInit {
     logger.log(`MongoDB connection state: ${stateMap[connState] || 'unknown'}`);
   }
 }
-

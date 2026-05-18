@@ -8,12 +8,7 @@ import { UserModule } from '../user/user.module';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [
-    UserModule,
-    PrismaModule,
-    PassportModule,
-    JwtModule.register({}),
-  ],
+  imports: [UserModule, PrismaModule, PassportModule, JwtModule.register({})],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule],

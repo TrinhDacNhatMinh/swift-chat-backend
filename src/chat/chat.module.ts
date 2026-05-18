@@ -9,7 +9,13 @@ import { FriendsModule } from '../friends/friends.module';
 import { UserModule } from '../user/user.module';
 
 @Module({
-  imports: [AuthModule, ConversationsModule, MessagesModule, FriendsModule, UserModule],
+  imports: [
+    AuthModule,
+    ConversationsModule,
+    MessagesModule,
+    FriendsModule,
+    UserModule,
+  ],
   providers: [ChatGateway, ChatService, WsJwtGuard],
 })
 export class ChatModule {}

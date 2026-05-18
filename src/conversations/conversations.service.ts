@@ -17,22 +17,31 @@ export class ConversationsService {
         throw new BadRequestException('partnerId is required for direct chat');
       }
       if (creatorId === dto.partnerId) {
-        throw new BadRequestException('You cannot create a conversation with yourself');
+        throw new BadRequestException(
+          'You cannot create a conversation with yourself',
+        );
       }
       return this.createOrGetDirectConversation(creatorId, dto.partnerId);
     }
 
     if (dto.type === ConversationType.GROUP) {
       if (!dto.memberIds || dto.memberIds.length === 0) {
-        throw new BadRequestException('memberIds array is required for group chat');
+        throw new BadRequestException(
+          'memberIds array is required for group chat',
+        );
       }
       return this.createGroupConversation(creatorId, dto.memberIds, dto.title);
     }
   }
 
-  private async createOrGetDirectConversation(userId: string, partnerId: string) {
+  private async createOrGetDirectConversation(
+    userId: string,
+    partnerId: string,
+  ) {
     // Verify partner exists
-    const partner = await this.prisma.user.findUnique({ where: { id: partnerId } });
+    const partner = await this.prisma.user.findUnique({
+      where: { id: partnerId },
+    });
     if (!partner) {
       throw new NotFoundException('Partner user not found');
     }
@@ -75,8 +84,16 @@ export class ConversationsService {
 
       await tx.participant.createMany({
         data: [
-          { conversationId: conversation.id, userId, role: ParticipantRole.MEMBER },
-          { conversationId: conversation.id, userId: partnerId, role: ParticipantRole.MEMBER },
+          {
+            conversationId: conversation.id,
+            userId,
+            role: ParticipantRole.MEMBER,
+          },
+          {
+            conversationId: conversation.id,
+            userId: partnerId,
+            role: ParticipantRole.MEMBER,
+          },
         ],
       });
 
@@ -114,7 +131,11 @@ export class ConversationsService {
       });
 
       const participantRecords = [
-        { conversationId: conversation.id, userId: creatorId, role: ParticipantRole.ADMIN },
+        {
+          conversationId: conversation.id,
+          userId: creatorId,
+          role: ParticipantRole.ADMIN,
+        },
         ...distinctMemberIds.map((uid) => ({
           conversationId: conversation.id,
           userId: uid,
@@ -139,7 +160,11 @@ export class ConversationsService {
     });
   }
 
-  async getUserConversations(userId: string, limit: number = 20, offset: number = 0) {
+  async getUserConversations(
+    userId: string,
+    limit: number = 20,
+    offset: number = 0,
+  ) {
     // Single JOIN query — avoids fetching a large ID array into Node.js memory first
     const participantFilter = { participants: { some: { userId } } };
 
@@ -150,7 +175,12 @@ export class ConversationsService {
           participants: {
             include: {
               user: {
-                select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+                select: {
+                  id: true,
+                  username: true,
+                  avatarUrl: true,
+                  lastSeen: true,
+                },
               },
             },
           },
@@ -178,7 +208,10 @@ export class ConversationsService {
     });
   }
 
-  async isParticipant(userId: string, conversationId: string): Promise<boolean> {
+  async isParticipant(
+    userId: string,
+    conversationId: string,
+  ): Promise<boolean> {
     const participant = await this.prisma.participant.findUnique({
       where: {
         conversationId_userId: {

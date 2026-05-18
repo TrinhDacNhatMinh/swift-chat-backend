@@ -11,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     if (!databaseUrl) throw new Error('POSTGRESQL is not set');
 
     const adapter = new PrismaPg({ connectionString: databaseUrl });
-    super({ adapter } as ConstructorParameters<typeof PrismaClient>[0]);
+    super({ adapter });
   }
 
   async onModuleInit() {

@@ -45,7 +45,11 @@ export class FriendsController {
 
   @Get('friends')
   getFriends(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
-    return this.friendsService.getFriends(user.id, pagination.limit, pagination.offset);
+    return this.friendsService.getFriends(
+      user.id,
+      pagination.limit,
+      pagination.offset,
+    );
   }
 
   @Delete('friends/:userId')

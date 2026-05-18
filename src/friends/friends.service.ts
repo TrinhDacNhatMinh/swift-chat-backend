@@ -26,7 +26,9 @@ export class FriendsService {
 
   async sendRequest(senderId: string, receiverId: string) {
     if (senderId === receiverId) {
-      throw new BadRequestException('You cannot send a friend request to yourself');
+      throw new BadRequestException(
+        'You cannot send a friend request to yourself',
+      );
     }
 
     // Check if receiver exists
@@ -126,7 +128,9 @@ export class FriendsService {
 
     // Only the receiver can accept or reject
     if (request.receiverId !== currentUserId) {
-      throw new ForbiddenException('You can only respond to friend requests sent to you');
+      throw new ForbiddenException(
+        'You can only respond to friend requests sent to you',
+      );
     }
 
     if (action === FriendRequestAction.REJECTED) {
@@ -187,10 +191,20 @@ export class FriendsService {
         where,
         include: {
           user1: {
-            select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+              lastSeen: true,
+            },
           },
           user2: {
-            select: { id: true, username: true, avatarUrl: true, lastSeen: true },
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+              lastSeen: true,
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -201,11 +215,18 @@ export class FriendsService {
     ]);
 
     // Return only the OTHER user in each friendship
-    const data = friendships.map((f) => (f.userId1 === userId ? f.user2 : f.user1));
+    const data = friendships.map((f) =>
+      f.userId1 === userId ? f.user2 : f.user1,
+    );
     const result = { data, total, limit, offset };
 
     if (isFirstPage) {
-      await this.redis.set(friendsCacheKey(userId), JSON.stringify(result), 'EX', FRIENDS_CACHE_TTL);
+      await this.redis.set(
+        friendsCacheKey(userId),
+        JSON.stringify(result),
+        'EX',
+        FRIENDS_CACHE_TTL,
+      );
     }
 
     return result;
@@ -216,7 +237,11 @@ export class FriendsService {
    * Used internally by ChatGateway for presence broadcasting.
    * Callers iterate pages until an empty array is returned.
    */
-  async getFriendIdsBatch(userId: string, skip: number, take: number = 100): Promise<string[]> {
+  async getFriendIdsBatch(
+    userId: string,
+    skip: number,
+    take: number = 100,
+  ): Promise<string[]> {
     const friendships = await this.prisma.friend.findMany({
       where: {
         OR: [{ userId1: userId }, { userId2: userId }],
@@ -226,7 +251,9 @@ export class FriendsService {
       take,
     });
 
-    return friendships.map((f) => (f.userId1 === userId ? f.userId2 : f.userId1));
+    return friendships.map((f) =>
+      f.userId1 === userId ? f.userId2 : f.userId1,
+    );
   }
 
   async removeFriend(userId: string, targetFriendId: string) {

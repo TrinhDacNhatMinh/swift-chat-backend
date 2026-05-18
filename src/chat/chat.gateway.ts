@@ -140,7 +140,10 @@ export class ChatGateway
       try {
         await this.userService.updateLastSeen(userId);
       } catch (error) {
-        this.logger.error(`Failed to update lastSeen for user ${userId}:`, error);
+        this.logger.error(
+          `Failed to update lastSeen for user ${userId}:`,
+          error,
+        );
       }
     }
   }
@@ -181,10 +184,12 @@ export class ChatGateway
     @MessageBody() dto: RoomEventDto,
     @ConnectedSocket() client: Socket,
   ) {
-    client.to(`conversation:${dto.conversationId}`).emit('chat:user_stop_typing', {
-      conversationId: dto.conversationId,
-      userId: client.data.userId,
-    });
+    client
+      .to(`conversation:${dto.conversationId}`)
+      .emit('chat:user_stop_typing', {
+        conversationId: dto.conversationId,
+        userId: client.data.userId,
+      });
   }
 
   @SubscribeMessage('chat:send_message')
@@ -195,7 +200,11 @@ export class ChatGateway
     const userId = client.data.userId;
     const senderName = client.data.username || client.data.email || 'Someone';
 
-    const savedMessage = await this.chatService.sendMessage(userId, senderName, dto);
+    const savedMessage = await this.chatService.sendMessage(
+      userId,
+      senderName,
+      dto,
+    );
 
     const responsePayload = {
       ...savedMessage.toObject(),
@@ -216,12 +225,14 @@ export class ChatGateway
   ) {
     await this.chatService.deleteMessage(client.data.userId, dto);
 
-    this.server.to(`conversation:${dto.conversationId}`).emit('chat:message_deleted', {
-      conversationId: dto.conversationId,
-      messageId: dto.messageId,
-      deletedBy: client.data.userId,
-      timestamp: new Date().toISOString(),
-    });
+    this.server
+      .to(`conversation:${dto.conversationId}`)
+      .emit('chat:message_deleted', {
+        conversationId: dto.conversationId,
+        messageId: dto.messageId,
+        deletedBy: client.data.userId,
+        timestamp: new Date().toISOString(),
+      });
 
     return { status: 'deleted', messageId: dto.messageId };
   }
@@ -233,13 +244,15 @@ export class ChatGateway
   ) {
     await this.chatService.editMessage(client.data.userId, dto);
 
-    this.server.to(`conversation:${dto.conversationId}`).emit('chat:message_edited', {
-      conversationId: dto.conversationId,
-      messageId: dto.messageId,
-      content: dto.content,
-      editedBy: client.data.userId,
-      timestamp: new Date().toISOString(),
-    });
+    this.server
+      .to(`conversation:${dto.conversationId}`)
+      .emit('chat:message_edited', {
+        conversationId: dto.conversationId,
+        messageId: dto.messageId,
+        content: dto.content,
+        editedBy: client.data.userId,
+        timestamp: new Date().toISOString(),
+      });
 
     return { status: 'edited', messageId: dto.messageId };
   }
@@ -268,7 +281,10 @@ export class ChatGateway
 
     const countKey = `${REDIS_CONNECTION_COUNT_PREFIX}${userId}`;
     await this.redisClient.expire(countKey, PRESENCE_TTL_SECONDS);
-    await this.redisClient.expire(`${REDIS_PRESENCE_PREFIX}${userId}`, PRESENCE_TTL_SECONDS);
+    await this.redisClient.expire(
+      `${REDIS_PRESENCE_PREFIX}${userId}`,
+      PRESENCE_TTL_SECONDS,
+    );
 
     return { status: 'ok' };
   }

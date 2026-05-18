@@ -26,7 +26,10 @@ export class MessagesController {
     @Param('conversationId') conversationId: string,
     @Query() dto: GetMessagesDto,
   ) {
-    const isMember = await this.conversationsService.isParticipant(user.id, conversationId);
+    const isMember = await this.conversationsService.isParticipant(
+      user.id,
+      conversationId,
+    );
     if (!isMember) {
       throw new ForbiddenException('You are not a member of this conversation');
     }

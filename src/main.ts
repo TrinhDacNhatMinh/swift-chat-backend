@@ -6,7 +6,7 @@ import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from './redis/redis.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   app.enableCors({
     origin: '*',
     credentials: true,

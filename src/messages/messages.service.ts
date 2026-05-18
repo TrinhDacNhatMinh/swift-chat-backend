@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Message, MessageDocument, MessageType } from './schemas/message.schema';
+import {
+  Message,
+  MessageDocument,
+  MessageType,
+} from './schemas/message.schema';
 import { CreateMessageDto } from './dto/create-message.dto';
 
 @Injectable()
@@ -10,7 +14,10 @@ export class MessagesService {
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
   ) {}
 
-  async create(senderId: string, dto: CreateMessageDto): Promise<MessageDocument> {
+  async create(
+    senderId: string,
+    dto: CreateMessageDto,
+  ): Promise<MessageDocument> {
     const message = new this.messageModel({
       conversation_id: dto.conversationId,
       sender_id: senderId,
@@ -35,14 +42,13 @@ export class MessagesService {
       query._id = { $lt: new Types.ObjectId(cursor) };
     }
 
-    return this.messageModel
-      .find(query)
-      .sort({ _id: -1 })
-      .limit(limit)
-      .exec();
+    return this.messageModel.find(query).sort({ _id: -1 }).limit(limit).exec();
   }
 
-  async softDelete(messageId: string, senderId: string): Promise<MessageDocument | null> {
+  async softDelete(
+    messageId: string,
+    senderId: string,
+  ): Promise<MessageDocument | null> {
     return this.messageModel.findOneAndUpdate(
       { _id: new Types.ObjectId(messageId), sender_id: senderId },
       { is_deleted: true, deleted_at: new Date() }, // Preserve content for audit trail
@@ -50,7 +56,11 @@ export class MessagesService {
     );
   }
 
-  async editMessage(messageId: string, senderId: string, newContent: string): Promise<MessageDocument | null> {
+  async editMessage(
+    messageId: string,
+    senderId: string,
+    newContent: string,
+  ): Promise<MessageDocument | null> {
     return this.messageModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(messageId),

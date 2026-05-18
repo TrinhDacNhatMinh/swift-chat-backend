@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
@@ -28,11 +32,15 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     // Check if user exists
-    const existingUserByEmail = await this.userService.findByEmail(registerDto.email);
+    const existingUserByEmail = await this.userService.findByEmail(
+      registerDto.email,
+    );
     if (existingUserByEmail) {
       throw new BadRequestException('Email already in use');
     }
-    const existingUserByUsername = await this.userService.findByUsername(registerDto.username);
+    const existingUserByUsername = await this.userService.findByUsername(
+      registerDto.username,
+    );
     if (existingUserByUsername) {
       throw new BadRequestException('Username already taken');
     }
@@ -57,7 +65,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -84,7 +95,9 @@ export class AuthService {
     });
 
     if (!storedToken) {
-      throw new UnauthorizedException('Refresh token has been revoked or is invalid');
+      throw new UnauthorizedException(
+        'Refresh token has been revoked or is invalid',
+      );
     }
 
     // 3. Issue new tokens
@@ -119,12 +132,17 @@ export class AuthService {
       // If user exists but registered via local or other provider, we might want to link or reject
       // For simplicity, we just log them in if email matches, or you can strictly check authProvider
       if (user.authProvider !== 'google') {
-        throw new BadRequestException('Email is already registered via another method');
+        throw new BadRequestException(
+          'Email is already registered via another method',
+        );
       }
     } else {
       // Create new user
       // Generate a base username from email or name
-      let baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      const baseUsername = email
+        .split('@')[0]
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase();
 
       // Ensure unique username
       let username = baseUsername;
@@ -175,17 +193,21 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN') as any,
+        expiresIn: this.configService.getOrThrow<string>(
+          'JWT_ACCESS_EXPIRES_IN',
+        ) as any,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES_IN') as any,
+        expiresIn: this.configService.getOrThrow<string>(
+          'JWT_REFRESH_EXPIRES_IN',
+        ) as any,
       }),
     ]);
 
     // Parse expiration string to Date object for DB
     // A simple approach: verify the token we just created to get the exp timestamp
-    const decoded = this.jwtService.decode(refreshToken) as any;
+    const decoded = this.jwtService.decode(refreshToken);
     const expiresAt = new Date(decoded.exp * 1000);
 
     // Save refresh token to DB
@@ -203,7 +225,7 @@ export class AuthService {
       user: {
         id: userId,
         email,
-      }
+      },
     };
   }
 }
