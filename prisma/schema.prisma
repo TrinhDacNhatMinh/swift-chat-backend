@@ -18,7 +18,8 @@ enum ConversationType {
 }
 
 enum ParticipantRole {
-  admin
+  leader
+  deputy
   member
 }
 
@@ -90,8 +91,10 @@ model Conversation {
   id        String           @id @default(uuid()) @db.Uuid
   type      ConversationType
   title     String?          @db.VarChar(255)
+  avatarUrl String?          @map("avatar_url")
   createdAt DateTime         @default(now()) @map("created_at")
   updatedAt DateTime         @updatedAt @map("updated_at")
+  deletedAt DateTime?        @map("deleted_at")
 
   participants Participant[]
 
@@ -105,6 +108,7 @@ model Participant {
   role              ParticipantRole @default(member)
   joinAt            DateTime        @default(now()) @map("join_at")
   lastReadMessageId String?         @map("last_read_message_id") @db.VarChar(255)
+  hiddenAt          DateTime?       @map("hidden_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   user         User         @relation(fields: [userId], references: [id])
