@@ -14,12 +14,27 @@ describe('ConversationsController', () => {
       getUserConversations: jest.fn(),
       isParticipant: jest.fn(),
       getReadReceipts: jest.fn(),
+      deleteConversation: jest.fn(),
+      updateGroupInfo: jest.fn(),
+      addMembers: jest.fn(),
+      kickMember: jest.fn(),
+      leaveGroup: jest.fn(),
+      updateMemberRole: jest.fn(),
+      transferLeadership: jest.fn(),
     };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ConversationsController],
       providers: [{ provide: ConversationsService, useValue: service }],
     }).compile();
     controller = module.get<ConversationsController>(ConversationsController);
+  });
+
+  afterEach(() => jest.clearAllMocks());
+
+  it('should be decorated with JwtAuthGuard', () => {
+    const guards = Reflect.getMetadata('__guards__', ConversationsController);
+    const hasJwtAuthGuard = guards.some((guard: any) => guard.name === 'JwtAuthGuard');
+    expect(hasJwtAuthGuard).toBe(true);
   });
 
   it('create() should pass user.id and dto', async () => {
@@ -51,5 +66,51 @@ describe('ConversationsController', () => {
 
     expect(service.isParticipant).toHaveBeenCalledWith('u1', 'c1');
     expect(result).toEqual(receipts);
+  });
+
+  it('deleteConversation() should call service', async () => {
+    service.deleteConversation.mockResolvedValue({ success: true });
+    await controller.deleteConversation({ id: 'u1' }, 'c1');
+    expect(service.deleteConversation).toHaveBeenCalledWith('u1', 'c1');
+  });
+
+  it('updateGroupInfo() should call service', async () => {
+    const dto = { title: 'New Title' };
+    service.updateGroupInfo.mockResolvedValue({ id: 'c1' });
+    await controller.updateGroupInfo({ id: 'u1' }, 'c1', dto);
+    expect(service.updateGroupInfo).toHaveBeenCalledWith('u1', 'c1', dto);
+  });
+
+  it('addMembers() should call service', async () => {
+    const dto = { userIds: ['u2', 'u3'] };
+    service.addMembers.mockResolvedValue({ success: true });
+    await controller.addMembers({ id: 'u1' }, 'c1', dto);
+    expect(service.addMembers).toHaveBeenCalledWith('u1', 'c1', dto.userIds);
+  });
+
+  it('kickMember() should call service', async () => {
+    service.kickMember.mockResolvedValue({ success: true });
+    await controller.kickMember({ id: 'u1' }, 'c1', 'u2');
+    expect(service.kickMember).toHaveBeenCalledWith('u1', 'c1', 'u2');
+  });
+
+  it('leaveGroup() should call service', async () => {
+    service.leaveGroup.mockResolvedValue({ success: true });
+    await controller.leaveGroup({ id: 'u1' }, 'c1');
+    expect(service.leaveGroup).toHaveBeenCalledWith('u1', 'c1');
+  });
+
+  it('updateMemberRole() should call service', async () => {
+    const dto = { role: 'DEPUTY' as any };
+    service.updateMemberRole.mockResolvedValue({ success: true });
+    await controller.updateMemberRole({ id: 'u1' }, 'c1', 'u2', dto);
+    expect(service.updateMemberRole).toHaveBeenCalledWith('u1', 'c1', 'u2', dto.role);
+  });
+
+  it('transferLeadership() should call service', async () => {
+    const dto = { newLeaderId: 'u2' };
+    service.transferLeadership.mockResolvedValue({ success: true });
+    await controller.transferLeadership({ id: 'u1' }, 'c1', dto);
+    expect(service.transferLeadership).toHaveBeenCalledWith('u1', 'c1', dto.newLeaderId);
   });
 });
