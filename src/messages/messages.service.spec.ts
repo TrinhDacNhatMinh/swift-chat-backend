@@ -29,6 +29,8 @@ const createMockModel = () => {
     }),
   });
 
+  model.findOne = jest.fn().mockResolvedValue(null);
+  model.findById = jest.fn().mockResolvedValue(null);
   model.findOneAndUpdate = jest.fn().mockResolvedValue(null);
 
   return { model, instance };
@@ -174,6 +176,171 @@ describe('MessagesService', () => {
       );
 
       expect(result).toBeNull();
+    });
+  });
+
+  // =========================================================================
+  // create() — reply to message
+  // =========================================================================
+  describe('create() with replyToMessageId', () => {
+    const VALID_OID = '507f1f77bcf86cd799439011';
+
+    it('should set reply_to snapshot when replyToMessageId is valid and same conversation', async () => {
+      const originalMsg = {
+        _id: { toString: () => VALID_OID },
+        sender_id: 'u2',
+        content: 'original text',
+        type: MessageType.TEXT,
+        conversation_id: 'c1',
+      };
+      mockModel.model.findById.mockResolvedValue(originalMsg);
+
+      const dto = {
+        conversationId: 'c1',
+        content: 'reply text',
+        replyToMessageId: VALID_OID,
+      };
+
+      await service.create('u1', dto);
+
+      expect(mockModel.model.findById).toHaveBeenCalledWith(VALID_OID);
+      expect(mockModel.model).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reply_to: {
+            messageId: VALID_OID,
+            senderId: 'u2',
+            content: 'original text',
+            type: MessageType.TEXT,
+          },
+        }),
+      );
+    });
+
+    it('should set reply_to to null when original message is from a different conversation', async () => {
+      mockModel.model.findById.mockResolvedValue({
+        _id: { toString: () => VALID_OID },
+        conversation_id: 'OTHER_CONV', // different conversation
+        sender_id: 'u2',
+        content: 'text',
+        type: MessageType.TEXT,
+      });
+
+      await service.create('u1', {
+        conversationId: 'c1',
+        content: 'reply',
+        replyToMessageId: VALID_OID,
+      });
+
+      expect(mockModel.model).toHaveBeenCalledWith(
+        expect.objectContaining({ reply_to: null }),
+      );
+    });
+
+    it('should set reply_to to null when original message does not exist', async () => {
+      mockModel.model.findById.mockResolvedValue(null);
+
+      await service.create('u1', {
+        conversationId: 'c1',
+        content: 'reply',
+        replyToMessageId: VALID_OID,
+      });
+
+      expect(mockModel.model).toHaveBeenCalledWith(
+        expect.objectContaining({ reply_to: null }),
+      );
+    });
+  });
+
+  // =========================================================================
+  // toggleReaction()
+  // =========================================================================
+  describe('toggleReaction()', () => {
+    const MSG_ID = '507f1f77bcf86cd799439011';
+
+    it('should ADD reaction ($push) when emoji does not exist yet', async () => {
+      // findOne returns null → reaction doesn't exist
+      mockModel.model.findOne.mockResolvedValue(null);
+      const updated = { _id: MSG_ID, reactions: [{ emoji: '👍', userId: 'u1' }] };
+      mockModel.model.findOneAndUpdate.mockResolvedValue(updated);
+
+      const result = await service.toggleReaction(MSG_ID, 'u1', '👍');
+
+      expect(mockModel.model.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reactions: { $elemMatch: { userId: 'u1', emoji: '👍' } },
+        }),
+      );
+      expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ $push: expect.any(Object) }),
+        { new: true },
+      );
+      expect(result).toEqual(updated);
+    });
+
+    it('should REMOVE reaction ($pull) when emoji already exists', async () => {
+      // findOne returns a document → reaction exists
+      mockModel.model.findOne.mockResolvedValue({ _id: MSG_ID });
+      const updated = { _id: MSG_ID, reactions: [] };
+      mockModel.model.findOneAndUpdate.mockResolvedValue(updated);
+
+      const result = await service.toggleReaction(MSG_ID, 'u1', '👍');
+
+      expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({ $pull: expect.any(Object) }),
+        { new: true },
+      );
+      expect(result).toEqual(updated);
+    });
+
+    it('should return null when message is not found after update', async () => {
+      mockModel.model.findOne.mockResolvedValue(null);
+      mockModel.model.findOneAndUpdate.mockResolvedValue(null);
+
+      const result = await service.toggleReaction(MSG_ID, 'u1', '❤️');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // =========================================================================
+  // searchMessages()
+  // =========================================================================
+  describe('searchMessages()', () => {
+    it('should pass $text search query with conversationId', async () => {
+      await service.searchMessages('c1', 'hello');
+
+      const findCall = mockModel.model.find.mock.calls[0][0];
+      expect(findCall).toEqual(
+        expect.objectContaining({
+          conversation_id: 'c1',
+          is_deleted: false,
+          $text: { $search: 'hello' },
+        }),
+      );
+    });
+
+    it('should add $lt cursor filter when cursor is provided', async () => {
+      await service.searchMessages('c1', 'hello', '507f1f77bcf86cd799439011');
+
+      const findCall = mockModel.model.find.mock.calls[0][0];
+      expect(findCall._id).toBeDefined();
+      expect(findCall._id.$lt).toBeDefined();
+    });
+
+    it('should NOT add cursor filter when no cursor provided', async () => {
+      await service.searchMessages('c1', 'hello');
+
+      const findCall = mockModel.model.find.mock.calls[0][0];
+      expect(findCall._id).toBeUndefined();
+    });
+
+    it('should pass textScore projection and sort to find', async () => {
+      await service.searchMessages('c1', 'hello');
+
+      const projection = mockModel.model.find.mock.calls[0][1];
+      expect(projection).toEqual({ score: { $meta: 'textScore' } });
     });
   });
 });
