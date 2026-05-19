@@ -23,4 +23,8 @@ export class CreateMessageDto {
   @IsOptional()
   @IsString()
   clientTempId?: string;
+
+  @IsOptional()
+  @IsString()
+  replyToMessageId?: string;
 }

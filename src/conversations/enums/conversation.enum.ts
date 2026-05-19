@@ -4,6 +4,7 @@ export enum ConversationType {
 }
 
 export enum ParticipantRole {
-  ADMIN = 'admin',
+  LEADER = 'leader',
+  DEPUTY = 'deputy',
   MEMBER = 'member',
 }
