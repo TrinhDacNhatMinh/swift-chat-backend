@@ -1,4 +1,5 @@
 import { WsJwtGuard } from './ws-jwt.guard';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { WsException } from '@nestjs/websockets';
@@ -28,7 +29,11 @@ describe('WsJwtGuard', () => {
     jwtService = { verify: jest.fn() };
     configService = { getOrThrow: jest.fn().mockReturnValue('secret') };
     guard = new WsJwtGuard(jwtService as any, configService as any);
+
+    jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
   });
+
+  afterEach(() => jest.clearAllMocks());
 
   it('should return true when userId is already set in socket.data', () => {
     const socket = mockSocket({ data: { userId: 'u1' } });

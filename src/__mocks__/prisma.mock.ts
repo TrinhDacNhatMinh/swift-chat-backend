@@ -35,6 +35,7 @@ export const createMockPrismaService = () => {
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
       count: jest.fn(),
     },
     participant: {
@@ -43,6 +44,8 @@ export const createMockPrismaService = () => {
       findMany: jest.fn(),
       createMany: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
+      count: jest.fn(),
     },
     notification: {
       findMany: jest.fn(),
