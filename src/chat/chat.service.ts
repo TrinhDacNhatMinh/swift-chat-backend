@@ -10,6 +10,7 @@ import { CreateMessageDto } from '../messages/dto/create-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
+import { ReactMessageDto } from './dto/react-message.dto';
 
 const PRESENCE_BROADCAST_BATCH_SIZE = 100;
 
@@ -29,6 +30,7 @@ export class ChatService {
   setServer(server: Server) {
     this.server = server;
     this.notificationsService.setServer(server);
+    this.conversationsService.setServer(server);
   }
 
   async joinRoom(userId: string, conversationId: string) {
@@ -106,6 +108,28 @@ export class ChatService {
       dto.conversationId,
       dto.messageId,
     );
+  }
+
+  async reactMessage(userId: string, dto: ReactMessageDto) {
+    const isParticipant = await this.conversationsService.isParticipant(
+      userId,
+      dto.conversationId,
+    );
+    if (!isParticipant) {
+      throw new WsException('Permission denied to react to this message');
+    }
+
+    const message = await this.messagesService.toggleReaction(
+      dto.messageId,
+      userId,
+      dto.emoji,
+    );
+
+    if (!message) {
+      throw new WsException('Message not found');
+    }
+
+    return message;
   }
 
   async broadcastPresenceToFriends(

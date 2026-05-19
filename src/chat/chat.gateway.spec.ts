@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ChatGateway } from './chat.gateway';
@@ -45,6 +46,7 @@ describe('ChatGateway', () => {
       deleteMessage: jest.fn().mockResolvedValue(undefined),
       editMessage: jest.fn().mockResolvedValue(undefined),
       markRead: jest.fn().mockResolvedValue(undefined),
+      reactMessage: jest.fn().mockResolvedValue({ reactions: [] }),
       broadcastPresenceToFriends: jest.fn().mockResolvedValue(undefined),
     };
     userService = {
@@ -74,6 +76,9 @@ describe('ChatGateway', () => {
     mockServer = createMockServer();
     gateway.server = mockServer as any;
     gateway.afterInit(mockServer as any);
+
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -363,6 +368,40 @@ describe('ChatGateway', () => {
         }),
       );
       expect(result).toEqual({ status: 'success' });
+    });
+  });
+
+  // =========================================================================
+  // Event: chat:react_message
+  // =========================================================================
+  describe('handleReactMessage()', () => {
+    it('should react to message and emit to room', async () => {
+      const dto = {
+        conversationId: 'c1',
+        messageId: 'msg1',
+        emoji: '👍',
+      };
+      const updatedMessage = { reactions: [{ emoji: '👍', userId: 'u1' }] };
+      chatService.reactMessage.mockResolvedValue(updatedMessage);
+      
+      const serverEmit = jest.fn();
+      gateway.server = {
+        to: jest.fn().mockReturnValue({ emit: serverEmit }),
+      } as any;
+      
+      const client = createMockSocket();
+      const result = await gateway.handleReactMessage(dto, client as any);
+
+      expect(chatService.reactMessage).toHaveBeenCalledWith('u1', dto);
+      expect(serverEmit).toHaveBeenCalledWith(
+        'chat:reaction_updated',
+        expect.objectContaining({
+          conversationId: 'c1',
+          messageId: 'msg1',
+          reactions: updatedMessage.reactions,
+        }),
+      );
+      expect(result).toEqual({ status: 'success', messageId: 'msg1' });
     });
   });
 

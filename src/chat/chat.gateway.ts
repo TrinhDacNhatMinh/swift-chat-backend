@@ -33,6 +33,7 @@ import { RoomEventDto } from './dto/room-event.dto';
 import { DeleteMessageDto } from './dto/delete-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
+import { ReactMessageDto } from './dto/react-message.dto';
 
 const REDIS_PRESENCE_PREFIX = 'presence:';
 const REDIS_CONNECTION_COUNT_PREFIX = 'conn_count:';
@@ -272,6 +273,27 @@ export class ChatGateway
     });
 
     return { status: 'success' };
+  }
+
+  @SubscribeMessage('chat:react_message')
+  async handleReactMessage(
+    @MessageBody() dto: ReactMessageDto,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const updatedMessage = await this.chatService.reactMessage(
+      client.data.userId,
+      dto,
+    );
+
+    this.server
+      .to(`conversation:${dto.conversationId}`)
+      .emit('chat:reaction_updated', {
+        conversationId: dto.conversationId,
+        messageId: dto.messageId,
+        reactions: updatedMessage.reactions,
+      });
+
+    return { status: 'success', messageId: dto.messageId };
   }
 
   @SubscribeMessage('chat:heartbeat')

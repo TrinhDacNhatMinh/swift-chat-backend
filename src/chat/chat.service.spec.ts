@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { Logger } from '@nestjs/common';
 import { WsException } from '@nestjs/websockets';
 import { ChatService } from './chat.service';
 import { ConversationsService } from '../conversations/conversations.service';
@@ -22,11 +23,13 @@ describe('ChatService', () => {
       conversationExists: jest.fn(),
       updateTimestamp: jest.fn().mockResolvedValue(undefined),
       markAsRead: jest.fn().mockResolvedValue(undefined),
+      setServer: jest.fn(), // [NEW] needed by ChatService.setServer()
     };
     messages = {
       create: jest.fn(),
       softDelete: jest.fn(),
       editMessage: jest.fn(),
+      toggleReaction: jest.fn(), // [NEW]
     };
     friends = {
       getFriendIdsBatch: jest.fn(),
@@ -56,6 +59,8 @@ describe('ChatService', () => {
       to: jest.fn().mockReturnValue({ emit: jest.fn() }),
     };
     service.setServer(mockServer);
+
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => jest.clearAllMocks());
@@ -64,10 +69,11 @@ describe('ChatService', () => {
   // setServer()
   // =========================================================================
   describe('setServer()', () => {
-    it('should set server and pass it to notificationsService', () => {
+    it('should set server and pass it to notificationsService and conversationsService', () => {
       const server = { to: jest.fn() } as any;
       service.setServer(server);
       expect(notifications.setServer).toHaveBeenCalledWith(server);
+      expect(conversations.setServer).toHaveBeenCalledWith(server);
     });
   });
 
@@ -238,6 +244,48 @@ describe('ChatService', () => {
       await expect(
         service.broadcastPresenceToFriends('u1', 'online'),
       ).resolves.not.toThrow();
+    });
+  });
+
+  // =========================================================================
+  // reactMessage()
+  // =========================================================================
+  describe('reactMessage()', () => {
+    const dto = { conversationId: 'c1', messageId: 'msg1', emoji: '👍' };
+
+    it('should throw WsException when user is not a participant', async () => {
+      conversations.isParticipant.mockResolvedValue(false);
+
+      await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
+      expect(messages.toggleReaction).not.toHaveBeenCalled();
+    });
+
+    it('should throw WsException when message not found', async () => {
+      conversations.isParticipant.mockResolvedValue(true);
+      messages.toggleReaction.mockResolvedValue(null);
+
+      await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
+    });
+
+    it('should return updated message on success (add reaction)', async () => {
+      conversations.isParticipant.mockResolvedValue(true);
+      const updated = { _id: 'msg1', reactions: [{ emoji: '👍', userId: 'u1' }] };
+      messages.toggleReaction.mockResolvedValue(updated);
+
+      const result = await service.reactMessage('u1', dto);
+
+      expect(messages.toggleReaction).toHaveBeenCalledWith('msg1', 'u1', '👍');
+      expect(result).toEqual(updated);
+    });
+
+    it('should return updated message on success (remove reaction)', async () => {
+      conversations.isParticipant.mockResolvedValue(true);
+      const updated = { _id: 'msg1', reactions: [] };
+      messages.toggleReaction.mockResolvedValue(updated);
+
+      const result = await service.reactMessage('u1', dto);
+
+      expect(result.reactions).toHaveLength(0);
     });
   });
 });
