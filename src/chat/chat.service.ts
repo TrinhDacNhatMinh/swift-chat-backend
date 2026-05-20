@@ -78,6 +78,15 @@ export class ChatService {
   }
 
   async deleteMessage(userId: string, dto: DeleteMessageDto) {
+    // Check conversation membership before touching the message
+    const isParticipant = await this.conversationsService.isParticipant(
+      userId,
+      dto.conversationId,
+    );
+    if (!isParticipant) {
+      throw new WsException('Permission denied: you are not a member of this conversation');
+    }
+
     const deleted = await this.messagesService.softDelete(
       dto.messageId,
       userId,
@@ -89,6 +98,15 @@ export class ChatService {
   }
 
   async editMessage(userId: string, dto: EditMessageDto) {
+    // Check conversation membership before touching the message
+    const isParticipant = await this.conversationsService.isParticipant(
+      userId,
+      dto.conversationId,
+    );
+    if (!isParticipant) {
+      throw new WsException('Permission denied: you are not a member of this conversation');
+    }
+
     const edited = await this.messagesService.editMessage(
       dto.messageId,
       userId,
