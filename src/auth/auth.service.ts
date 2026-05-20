@@ -197,12 +197,15 @@ export class AuthService {
           'JWT_ACCESS_EXPIRES_IN',
         ) as any,
       }),
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.getOrThrow<string>(
-          'JWT_REFRESH_EXPIRES_IN',
-        ) as any,
-      }),
+      this.jwtService.signAsync(
+        { ...payload, jti: crypto.randomUUID() },
+        {
+          secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
+          expiresIn: this.configService.getOrThrow<string>(
+            'JWT_REFRESH_EXPIRES_IN',
+          ) as any,
+        }
+      ),
     ]);
 
     // Parse expiration string to Date object for DB
