@@ -35,7 +35,7 @@ describe('NotificationsService', () => {
       actor: { id: 'u2', username: 'actor', avatarUrl: null },
     };
 
-    it('should create notification and emit via socket when server is set', async () => {
+    it('should create notification and emit via socket when server is set in create()', async () => {
       prisma.notification.create.mockResolvedValue(notification);
       const mockEmit = jest.fn();
       const mockServer = {
@@ -66,7 +66,7 @@ describe('NotificationsService', () => {
       expect(result).toEqual(notification);
     });
 
-    it('should create notification without emitting when server is not set', async () => {
+    it('should create notification without emitting when server is not set in create()', async () => {
       prisma.notification.create.mockResolvedValue(notification);
 
       const result = await service.create(
@@ -85,7 +85,7 @@ describe('NotificationsService', () => {
   // getUserNotifications()
   // =========================================================================
   describe('getUserNotifications()', () => {
-    it('should return notifications ordered by createdAt desc', async () => {
+    it('should return notifications ordered by createdAt desc when getUserNotifications() is called', async () => {
       const notifications = [{ id: 'n1' }, { id: 'n2' }];
       prisma.notification.findMany.mockResolvedValue(notifications);
 
@@ -106,7 +106,7 @@ describe('NotificationsService', () => {
   // markAsRead()
   // =========================================================================
   describe('markAsRead()', () => {
-    it('should update isRead for owned notification', async () => {
+    it('should update isRead for owned notification when markAsRead() is called', async () => {
       prisma.notification.update.mockResolvedValue({ id: 'n1', isRead: true });
 
       await service.markAsRead('n1', 'u1');
@@ -122,7 +122,7 @@ describe('NotificationsService', () => {
   // markAllAsRead()
   // =========================================================================
   describe('markAllAsRead()', () => {
-    it('should mark all unread notifications as read', async () => {
+    it('should mark all unread notifications as read when markAllAsRead() is called', async () => {
       prisma.notification.updateMany.mockResolvedValue({ count: 5 });
 
       await service.markAllAsRead('u1');
@@ -138,7 +138,7 @@ describe('NotificationsService', () => {
   // getUnreadCount()
   // =========================================================================
   describe('getUnreadCount()', () => {
-    it('should return count of unread notifications', async () => {
+    it('should return count of unread notifications when getUnreadCount() is called', async () => {
       prisma.notification.count.mockResolvedValue(3);
 
       const result = await service.getUnreadCount('u1');

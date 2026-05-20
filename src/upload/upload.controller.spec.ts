@@ -16,13 +16,13 @@ describe('UploadController', () => {
     controller = module.get<UploadController>(UploadController);
   });
 
-  it('uploadFile() should throw BadRequestException when no file provided', async () => {
+  it('should throw BadRequestException when no file provided to uploadFile()', async () => {
     await expect(controller.uploadFile(undefined as any)).rejects.toThrow(
       BadRequestException,
     );
   });
 
-  it('uploadFile() should return formatted response on success', async () => {
+  it('should return formatted response when file upload succeeds', async () => {
     uploadService.uploadFile.mockResolvedValue({
       secure_url: 'https://cdn.test/img.jpg',
       public_id: 'swift-chat/img',

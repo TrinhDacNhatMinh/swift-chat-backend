@@ -51,7 +51,7 @@ describe('FcmService', () => {
   // registerDevice()
   // =========================================================================
   describe('registerDevice()', () => {
-    it('should upsert device token', async () => {
+    it('should upsert device token when registerDevice() is called', async () => {
       const device = {
         id: 'd1',
         userId: 'u1',
@@ -75,7 +75,7 @@ describe('FcmService', () => {
   // removeDevice()
   // =========================================================================
   describe('removeDevice()', () => {
-    it('should delete device token', async () => {
+    it('should delete device token when removeDevice() is called', async () => {
       prisma.deviceToken.delete.mockResolvedValue({});
 
       await service.removeDevice('tok');
@@ -85,7 +85,7 @@ describe('FcmService', () => {
       });
     });
 
-    it('should not throw when token does not exist', async () => {
+    it('should not throw when token does not exist in removeDevice()', async () => {
       prisma.deviceToken.delete.mockRejectedValue(new Error('not found'));
 
       await expect(service.removeDevice('tok')).resolves.not.toThrow();
@@ -96,14 +96,14 @@ describe('FcmService', () => {
   // sendPushToUser()
   // =========================================================================
   describe('sendPushToUser()', () => {
-    it('should return early when not initialized', async () => {
+    it('should return early when not initialized in sendPushToUser()', async () => {
       // isInitialized is false because fs.existsSync returns false
       await service.sendPushToUser('u1', 'Title', 'Body');
 
       expect(prisma.deviceToken.findMany).not.toHaveBeenCalled();
     });
 
-    it('should send push and cleanup invalid tokens when initialized', async () => {
+    it('should send push and cleanup invalid tokens when sendPushToUser() is initialized', async () => {
       // Force isInitialized to true
       (service as any).isInitialized = true;
 
@@ -136,7 +136,7 @@ describe('FcmService', () => {
       });
     });
 
-    it('should return early when user has no devices', async () => {
+    it('should return early when user has no devices in sendPushToUser()', async () => {
       (service as any).isInitialized = true;
       prisma.deviceToken.findMany.mockResolvedValue([]);
 
@@ -150,13 +150,13 @@ describe('FcmService', () => {
   // sendPushToOfflineParticipants()
   // =========================================================================
   describe('sendPushToOfflineParticipants()', () => {
-    it('should return early when not initialized', async () => {
+    it('should return early when not initialized in sendPushToOfflineParticipants()', async () => {
       await service.sendPushToOfflineParticipants('c1', 'u1', 'User', 'Hello');
 
       expect(prisma.participant.findMany).not.toHaveBeenCalled();
     });
 
-    it('should filter offline users via Redis mget and send push', async () => {
+    it('should filter offline users via Redis mget and send push when sendPushToOfflineParticipants() is called', async () => {
       (service as any).isInitialized = true;
 
       prisma.participant.findMany.mockResolvedValue([

@@ -28,21 +28,21 @@ describe('MessagesController', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('should be decorated with JwtAuthGuard', () => {
+  it('should be decorated with JwtAuthGuard when class is evaluated', () => {
     const guards = Reflect.getMetadata('__guards__', MessagesController);
     const hasJwtAuthGuard = guards.some((guard: any) => guard.name === 'JwtAuthGuard');
     expect(hasJwtAuthGuard).toBe(true);
   });
 
   describe('findAll()', () => {
-    it('should throw ForbiddenException when not a member', async () => {
+    it('should throw ForbiddenException when user is not a member in findAll()', async () => {
       conversationsService.isParticipant.mockResolvedValue(false);
       await expect(
         controller.findAll({ id: 'u1' }, 'c1', {} as any),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should return messages when user is a member', async () => {
+    it('should return messages when user is a member in findAll()', async () => {
       conversationsService.isParticipant.mockResolvedValue(true);
       const msgs = [{ _id: 'msg1' }];
       messagesService.findByConversation.mockResolvedValue(msgs);
@@ -63,14 +63,14 @@ describe('MessagesController', () => {
   });
 
   describe('searchMessages()', () => {
-    it('should throw ForbiddenException when not a member', async () => {
+    it('should throw ForbiddenException when user is not a member in searchMessages()', async () => {
       conversationsService.isParticipant.mockResolvedValue(false);
       await expect(
         controller.searchMessages({ id: 'u1' }, 'c1', { q: 'test' } as any),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should return matched messages when user is a member', async () => {
+    it('should return matched messages when user is a member in searchMessages()', async () => {
       conversationsService.isParticipant.mockResolvedValue(true);
       const msgs = [{ _id: 'msg1', content: 'test' }];
       messagesService.searchMessages.mockResolvedValue(msgs);

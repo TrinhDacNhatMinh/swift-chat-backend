@@ -59,7 +59,7 @@ describe('MessagesService', () => {
   // create()
   // =========================================================================
   describe('create()', () => {
-    it('should create text message with default type', async () => {
+    it('should create text message with default type when create() is called without type', async () => {
       const dto = { conversationId: 'c1', content: 'hello' };
 
       await service.create('u1', dto);
@@ -75,7 +75,7 @@ describe('MessagesService', () => {
       expect(mockModel.instance.save).toHaveBeenCalled();
     });
 
-    it('should create message with specified type', async () => {
+    it('should create message with specified type when create() is called with explicit type', async () => {
       const dto = {
         conversationId: 'c1',
         content: 'img.png',
@@ -94,7 +94,7 @@ describe('MessagesService', () => {
   // findByConversation()
   // =========================================================================
   describe('findByConversation()', () => {
-    it('should query without cursor filter when no cursor', async () => {
+    it('should query without cursor filter when findByConversation() is called without cursor', async () => {
       await service.findByConversation('c1');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
@@ -102,7 +102,7 @@ describe('MessagesService', () => {
       expect(findCall._id).toBeUndefined();
     });
 
-    it('should add $lt filter when cursor provided', async () => {
+    it('should add $lt filter when findByConversation() is called with cursor', async () => {
       await service.findByConversation('c1', '507f1f77bcf86cd799439011');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
@@ -115,7 +115,7 @@ describe('MessagesService', () => {
   // softDelete()
   // =========================================================================
   describe('softDelete()', () => {
-    it('should set is_deleted and deleted_at on success', async () => {
+    it('should set is_deleted and deleted_at when softDelete() succeeds', async () => {
       const deleted = { _id: 'msg1', is_deleted: true };
       mockModel.model.findOneAndUpdate.mockResolvedValue(deleted);
 
@@ -132,7 +132,7 @@ describe('MessagesService', () => {
       expect(result).toEqual(deleted);
     });
 
-    it('should return null when message not found or wrong sender', async () => {
+    it('should return null when message not found or wrong sender in softDelete()', async () => {
       mockModel.model.findOneAndUpdate.mockResolvedValue(null);
 
       const result = await service.softDelete(
@@ -148,7 +148,7 @@ describe('MessagesService', () => {
   // editMessage()
   // =========================================================================
   describe('editMessage()', () => {
-    it('should update content and set is_edited on success', async () => {
+    it('should update content and set is_edited when editMessage() succeeds', async () => {
       const edited = { _id: 'msg1', content: 'updated', is_edited: true };
       mockModel.model.findOneAndUpdate.mockResolvedValue(edited);
 
@@ -166,7 +166,7 @@ describe('MessagesService', () => {
       expect(result).toEqual(edited);
     });
 
-    it('should return null for deleted message', async () => {
+    it('should return null when message is deleted in editMessage()', async () => {
       mockModel.model.findOneAndUpdate.mockResolvedValue(null);
 
       const result = await service.editMessage(
@@ -185,7 +185,7 @@ describe('MessagesService', () => {
   describe('create() with replyToMessageId', () => {
     const VALID_OID = '507f1f77bcf86cd799439011';
 
-    it('should set reply_to snapshot when replyToMessageId is valid and same conversation', async () => {
+    it('should set reply_to snapshot when replyToMessageId is valid and original is from same conversation', async () => {
       const originalMsg = {
         _id: { toString: () => VALID_OID },
         sender_id: 'u2',
@@ -257,7 +257,7 @@ describe('MessagesService', () => {
   describe('toggleReaction()', () => {
     const MSG_ID = '507f1f77bcf86cd799439011';
 
-    it('should ADD reaction ($push) when emoji does not exist yet', async () => {
+    it('should ADD reaction via $push when emoji does not exist yet in toggleReaction()', async () => {
       // findOne returns null → reaction doesn't exist
       mockModel.model.findOne.mockResolvedValue(null);
       const updated = { _id: MSG_ID, reactions: [{ emoji: '👍', userId: 'u1' }] };
@@ -278,7 +278,7 @@ describe('MessagesService', () => {
       expect(result).toEqual(updated);
     });
 
-    it('should REMOVE reaction ($pull) when emoji already exists', async () => {
+    it('should REMOVE reaction via $pull when emoji already exists in toggleReaction()', async () => {
       // findOne returns a document → reaction exists
       mockModel.model.findOne.mockResolvedValue({ _id: MSG_ID });
       const updated = { _id: MSG_ID, reactions: [] };
@@ -294,7 +294,7 @@ describe('MessagesService', () => {
       expect(result).toEqual(updated);
     });
 
-    it('should return null when message is not found after update', async () => {
+    it('should return null when message is not found after update in toggleReaction()', async () => {
       mockModel.model.findOne.mockResolvedValue(null);
       mockModel.model.findOneAndUpdate.mockResolvedValue(null);
 
@@ -308,7 +308,7 @@ describe('MessagesService', () => {
   // searchMessages()
   // =========================================================================
   describe('searchMessages()', () => {
-    it('should pass $text search query with conversationId', async () => {
+    it('should pass $text search query with conversationId when searchMessages() is called', async () => {
       await service.searchMessages('c1', 'hello');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
@@ -321,7 +321,7 @@ describe('MessagesService', () => {
       );
     });
 
-    it('should add $lt cursor filter when cursor is provided', async () => {
+    it('should add $lt cursor filter when searchMessages() is called with cursor', async () => {
       await service.searchMessages('c1', 'hello', '507f1f77bcf86cd799439011');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
@@ -329,14 +329,14 @@ describe('MessagesService', () => {
       expect(findCall._id.$lt).toBeDefined();
     });
 
-    it('should NOT add cursor filter when no cursor provided', async () => {
+    it('should NOT add cursor filter when searchMessages() is called without cursor', async () => {
       await service.searchMessages('c1', 'hello');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
       expect(findCall._id).toBeUndefined();
     });
 
-    it('should pass textScore projection and sort to find', async () => {
+    it('should pass textScore projection and sort to find when searchMessages() is called', async () => {
       await service.searchMessages('c1', 'hello');
 
       const projection = mockModel.model.find.mock.calls[0][1];

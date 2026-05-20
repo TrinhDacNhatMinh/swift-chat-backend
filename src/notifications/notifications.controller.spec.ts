@@ -20,32 +20,32 @@ describe('NotificationsController', () => {
     controller = module.get<NotificationsController>(NotificationsController);
   });
 
-  it('getUserNotifications() should pass user.id and parsed limit', async () => {
+  it('should pass user.id and parsed limit to service.getUserNotifications when getUserNotifications() is called', async () => {
     service.getUserNotifications.mockResolvedValue([]);
     await controller.getUserNotifications({ id: 'u1' }, '10');
     expect(service.getUserNotifications).toHaveBeenCalledWith('u1', 10);
   });
 
-  it('getUserNotifications() should use default limit 20 when not provided', async () => {
+  it('should use default limit 20 to service.getUserNotifications when limit is not provided', async () => {
     service.getUserNotifications.mockResolvedValue([]);
     await controller.getUserNotifications({ id: 'u1' });
     expect(service.getUserNotifications).toHaveBeenCalledWith('u1', 20);
   });
 
-  it('getUnreadCount() should pass user.id', async () => {
+  it('should pass user.id to service.getUnreadCount when getUnreadCount() is called', async () => {
     service.getUnreadCount.mockResolvedValue({ count: 3 });
     const result = await controller.getUnreadCount({ id: 'u1' });
     expect(service.getUnreadCount).toHaveBeenCalledWith('u1');
     expect(result).toEqual({ count: 3 });
   });
 
-  it('markAllAsRead() should pass user.id', async () => {
+  it('should pass user.id to service.markAllAsRead when markAllAsRead() is called', async () => {
     service.markAllAsRead.mockResolvedValue({ count: 5 });
     await controller.markAllAsRead({ id: 'u1' });
     expect(service.markAllAsRead).toHaveBeenCalledWith('u1');
   });
 
-  it('markAsRead() should pass notification id and user.id', async () => {
+  it('should pass notification id and user.id to service.markAsRead when markAsRead() is called', async () => {
     service.markAsRead.mockResolvedValue({});
     await controller.markAsRead({ id: 'u1' }, 'n1');
     expect(service.markAsRead).toHaveBeenCalledWith('n1', 'u1');

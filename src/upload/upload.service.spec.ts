@@ -46,7 +46,7 @@ describe('UploadService', () => {
   // uploadFile()
   // =========================================================================
   describe('uploadFile()', () => {
-    it('should throw ServiceUnavailableException when Cloudinary is not configured', async () => {
+    it('should throw ServiceUnavailableException when Cloudinary is not configured in uploadFile()', async () => {
       configService.get.mockReturnValue(undefined);
 
       await expect(service.uploadFile(mockFile)).rejects.toThrow(
@@ -54,7 +54,7 @@ describe('UploadService', () => {
       );
     });
 
-    it('should throw when only partial config is present', async () => {
+    it('should throw ServiceUnavailableException when only partial config is present in uploadFile()', async () => {
       configService.get
         .mockReturnValueOnce('cloud-name')
         .mockReturnValueOnce('api-key')
@@ -65,7 +65,7 @@ describe('UploadService', () => {
       );
     });
 
-    it('should upload file successfully and return result', async () => {
+    it('should upload file successfully and return result when uploadFile() succeeds', async () => {
       configService.get
         .mockReturnValueOnce('cloud-name')
         .mockReturnValueOnce('api-key')
@@ -103,7 +103,7 @@ describe('UploadService', () => {
       );
     });
 
-    it('should throw BadRequestException on upload error', async () => {
+    it('should throw BadRequestException when uploadFile() encounters an upload error', async () => {
       configService.get
         .mockReturnValueOnce('cloud-name')
         .mockReturnValueOnce('api-key')
@@ -122,7 +122,7 @@ describe('UploadService', () => {
       );
     });
 
-    it('should throw BadRequestException when result is null', async () => {
+    it('should throw BadRequestException when result is null in uploadFile()', async () => {
       configService.get
         .mockReturnValueOnce('cloud-name')
         .mockReturnValueOnce('api-key')

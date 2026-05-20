@@ -41,20 +41,20 @@ describe('FriendsService', () => {
   // sendRequest()
   // =========================================================================
   describe('sendRequest()', () => {
-    it('should throw when sending request to self', async () => {
+    it('should throw BadRequestException when sending request to self in sendRequest()', async () => {
       await expect(service.sendRequest('u1', 'u1')).rejects.toThrow(
         BadRequestException,
       );
     });
 
-    it('should throw when receiver does not exist', async () => {
+    it('should throw NotFoundException when receiver does not exist in sendRequest()', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
       await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should throw when already friends', async () => {
+    it('should throw BadRequestException when already friends in sendRequest()', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
       prisma.friend.findFirst.mockResolvedValue({ id: 'f1' });
       await expect(service.sendRequest('u1', 'u2')).rejects.toThrow(
@@ -62,7 +62,7 @@ describe('FriendsService', () => {
       );
     });
 
-    it('should throw when pending request already exists', async () => {
+    it('should throw BadRequestException when pending request already exists in sendRequest()', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
       prisma.friend.findFirst.mockResolvedValue(null);
       prisma.friendRequest.findFirst.mockResolvedValue({ id: 'req1' });
@@ -71,7 +71,7 @@ describe('FriendsService', () => {
       );
     });
 
-    it('should upsert request and create notification on success', async () => {
+    it('should upsert request and create notification when sendRequest() succeeds', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: 'u2' });
       prisma.friend.findFirst.mockResolvedValue(null);
       prisma.friendRequest.findFirst.mockResolvedValue(null);
@@ -98,7 +98,7 @@ describe('FriendsService', () => {
   // getPendingRequests()
   // =========================================================================
   describe('getPendingRequests()', () => {
-    it('should return pending requests for user', async () => {
+    it('should return pending requests when getPendingRequests() is called', async () => {
       const requests = [{ id: 'r1', senderId: 'u2' }];
       prisma.friendRequest.findMany.mockResolvedValue(requests);
 
@@ -124,14 +124,14 @@ describe('FriendsService', () => {
       status: FriendRequestStatus.PENDING,
     };
 
-    it('should throw when request not found', async () => {
+    it('should throw NotFoundException when request not found in respondToRequest()', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue(null);
       await expect(
         service.respondToRequest('req1', 'u2', FriendRequestAction.ACCEPTED),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw when request already processed', async () => {
+    it('should throw BadRequestException when request already processed in respondToRequest()', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue({
         ...pendingReq,
         status: FriendRequestStatus.ACCEPTED,
@@ -141,14 +141,14 @@ describe('FriendsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw when non-receiver tries to respond', async () => {
+    it('should throw ForbiddenException when non-receiver tries to respond in respondToRequest()', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue(pendingReq);
       await expect(
         service.respondToRequest('req1', 'u1', FriendRequestAction.ACCEPTED),
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should update status to REJECTED on reject', async () => {
+    it('should update status to REJECTED when respondToRequest() action is REJECTED', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue(pendingReq);
       prisma.friendRequest.update.mockResolvedValue({
         ...pendingReq,
@@ -167,7 +167,7 @@ describe('FriendsService', () => {
       });
     });
 
-    it('should create friendship in transaction on accept', async () => {
+    it('should create friendship in transaction when respondToRequest() action is ACCEPTED', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue(pendingReq);
       prisma.friendRequest.update.mockResolvedValue({
         ...pendingReq,
@@ -185,7 +185,7 @@ describe('FriendsService', () => {
       expect(prisma.friend.create).toHaveBeenCalled();
     });
 
-    it('should invalidate cache and notify on accept', async () => {
+    it('should invalidate cache and notify when respondToRequest() action is ACCEPTED', async () => {
       prisma.friendRequest.findUnique.mockResolvedValue(pendingReq);
       prisma.friendRequest.update.mockResolvedValue({
         ...pendingReq,
@@ -209,7 +209,7 @@ describe('FriendsService', () => {
   // getFriends()
   // =========================================================================
   describe('getFriends()', () => {
-    it('should return cached result for first page on cache hit', async () => {
+    it('should return cached result for first page when cache hits in getFriends()', async () => {
       const cached = { data: [], total: 0, limit: 20, offset: 0 };
       redis.get.mockResolvedValue(JSON.stringify(cached));
 
@@ -219,7 +219,7 @@ describe('FriendsService', () => {
       expect(result).toEqual(cached);
     });
 
-    it('should query DB and set cache for first page on cache miss', async () => {
+    it('should query DB and set cache for first page when cache misses in getFriends()', async () => {
       redis.get.mockResolvedValue(null);
       prisma.friend.findMany.mockResolvedValue([
         {
@@ -242,7 +242,7 @@ describe('FriendsService', () => {
       );
     });
 
-    it('should not use cache for paginated requests', async () => {
+    it('should not use cache for paginated requests when offset > 0 in getFriends()', async () => {
       prisma.friend.findMany.mockResolvedValue([]);
       prisma.friend.count.mockResolvedValue(0);
 
@@ -257,7 +257,7 @@ describe('FriendsService', () => {
   // getFriendIdsBatch()
   // =========================================================================
   describe('getFriendIdsBatch()', () => {
-    it('should map friend IDs correctly', async () => {
+    it('should map friend IDs correctly when getFriendIdsBatch() is called', async () => {
       prisma.friend.findMany.mockResolvedValue([
         { userId1: 'u1', userId2: 'u2' },
         { userId1: 'u3', userId2: 'u1' },
@@ -268,7 +268,7 @@ describe('FriendsService', () => {
       expect(ids).toEqual(['u2', 'u3']);
     });
 
-    it('should return empty array when no friends', async () => {
+    it('should return empty array when no friends in getFriendIdsBatch()', async () => {
       prisma.friend.findMany.mockResolvedValue([]);
       expect(await service.getFriendIdsBatch('u1', 0)).toEqual([]);
     });
@@ -278,14 +278,14 @@ describe('FriendsService', () => {
   // removeFriend()
   // =========================================================================
   describe('removeFriend()', () => {
-    it('should throw when friendship not found', async () => {
+    it('should throw NotFoundException when friendship not found in removeFriend()', async () => {
       prisma.friend.findFirst.mockResolvedValue(null);
       await expect(service.removeFriend('u1', 'u2')).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should delete friendship and invalidate cache', async () => {
+    it('should delete friendship and invalidate cache when removeFriend() succeeds', async () => {
       prisma.friend.findFirst.mockResolvedValue({ id: 'f1' });
       prisma.friend.delete.mockResolvedValue({});
 
