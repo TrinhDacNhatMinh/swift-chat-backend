@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Server } from 'socket.io';
 import { NotificationType } from './enums/notification-type.enum';
@@ -54,13 +54,21 @@ export class NotificationsService {
   }
 
   async markAsRead(notificationId: string, userId: string) {
-    return this.prisma.notification.update({
-      where: {
-        id: notificationId,
-        userId: userId, // Ensure user owns the notification
-      },
-      data: { isRead: true },
-    });
+    try {
+      return await this.prisma.notification.update({
+        where: {
+          id: notificationId,
+          userId: userId, // Ensure user owns the notification
+        },
+        data: { isRead: true },
+      });
+    } catch (error: any) {
+      // P2025: record not found — either ID doesn't exist or userId doesn't match
+      if (error?.code === 'P2025') {
+        throw new NotFoundException('Notification not found');
+      }
+      throw error;
+    }
   }
 
   async markAllAsRead(userId: string) {
