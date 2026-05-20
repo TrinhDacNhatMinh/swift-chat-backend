@@ -35,14 +35,14 @@ describe('WsJwtGuard', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  it('should return true when userId is already set in socket.data', () => {
+  it('should return true and skip verification when userId is already set in socket.data', () => {
     const socket = mockSocket({ data: { userId: 'u1' } });
     const result = guard.canActivate(mockContext(socket));
     expect(result).toBe(true);
     expect(jwtService.verify).not.toHaveBeenCalled();
   });
 
-  it('should verify token from handshake.auth.token and set userId', () => {
+  it('should verify token from handshake.auth.token and set userId when token is present', () => {
     const socket = mockSocket();
     socket.handshake.auth.token = 'valid-token';
     jwtService.verify.mockReturnValue({ sub: 'u1', email: 'e@e.com' });
@@ -54,7 +54,7 @@ describe('WsJwtGuard', () => {
     expect(socket.data.email).toBe('e@e.com');
   });
 
-  it('should verify token from Authorization header as fallback', () => {
+  it('should verify token from Authorization header when handshake.auth.token is absent', () => {
     const socket = mockSocket();
     socket.handshake.headers.authorization = 'Bearer header-token';
     jwtService.verify.mockReturnValue({ sub: 'u2', email: 'h@h.com' });
@@ -68,12 +68,12 @@ describe('WsJwtGuard', () => {
     expect(socket.data.userId).toBe('u2');
   });
 
-  it('should throw WsException when no token is present', () => {
+  it('should throw WsException when no token is present in canActivate()', () => {
     const socket = mockSocket();
     expect(() => guard.canActivate(mockContext(socket))).toThrow(WsException);
   });
 
-  it('should throw WsException when token verification fails', () => {
+  it('should throw WsException when token verification fails in canActivate()', () => {
     const socket = mockSocket();
     socket.handshake.auth.token = 'bad-token';
     jwtService.verify.mockImplementation(() => {

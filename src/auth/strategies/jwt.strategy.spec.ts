@@ -25,7 +25,7 @@ describe('JwtStrategy', () => {
     strategy = module.get<JwtStrategy>(JwtStrategy);
   });
 
-  it('should return user payload when user exists', async () => {
+  it('should return user payload when user exists in validate()', async () => {
     userService.findById.mockResolvedValue({ id: 'u1', email: 'e@e.com' });
 
     const result = await strategy.validate({ sub: 'u1', email: 'e@e.com' });
@@ -34,7 +34,7 @@ describe('JwtStrategy', () => {
     expect(result).toEqual({ id: 'u1', email: 'e@e.com' });
   });
 
-  it('should throw UnauthorizedException when user does not exist', async () => {
+  it('should throw UnauthorizedException when user does not exist in validate()', async () => {
     userService.findById.mockResolvedValue(null);
 
     await expect(

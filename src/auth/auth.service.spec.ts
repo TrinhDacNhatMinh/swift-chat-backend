@@ -93,7 +93,7 @@ describe('AuthService', () => {
       password: 'password123',
     };
 
-    it('should throw if email already in use', async () => {
+    it('should throw BadRequestException when email is already in use', async () => {
       userService.findByEmail.mockResolvedValue(mockUser());
 
       await expect(service.register(dto)).rejects.toThrow(BadRequestException);
@@ -102,7 +102,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if username already taken', async () => {
+    it('should throw BadRequestException when username is already taken', async () => {
       userService.findByEmail.mockResolvedValue(null);
       userService.findByUsername.mockResolvedValue(mockUser());
 
@@ -112,7 +112,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should hash password with salt rounds 10 and create user', async () => {
+    it('should hash password and create user when valid registration data is provided', async () => {
       userService.findByEmail.mockResolvedValue(null);
       userService.findByUsername.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-pw');
@@ -134,7 +134,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should return access token, refresh token, and user info', async () => {
+    it('should return tokens and user info when registration is successful', async () => {
       userService.findByEmail.mockResolvedValue(null);
       userService.findByUsername.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-pw');
@@ -158,13 +158,13 @@ describe('AuthService', () => {
   describe('login()', () => {
     const dto = { username: 'testuser', password: 'password123' };
 
-    it('should throw if user not found', async () => {
+    it('should throw UnauthorizedException when user does not exist', async () => {
       userService.findByUsername.mockResolvedValue(null);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw if user uses non-local auth provider', async () => {
+    it('should throw UnauthorizedException when user attempts to login with non-local provider', async () => {
       userService.findByUsername.mockResolvedValue(
         mockUser({ authProvider: 'google', passwordHash: null }),
       );
@@ -172,14 +172,14 @@ describe('AuthService', () => {
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should throw if password is invalid', async () => {
+    it('should throw UnauthorizedException when password does not match', async () => {
       userService.findByUsername.mockResolvedValue(mockUser());
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
-    it('should return token pair on successful login', async () => {
+    it('should return token pair when credentials are valid', async () => {
       const user = mockUser();
       userService.findByUsername.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
@@ -202,7 +202,7 @@ describe('AuthService', () => {
   describe('refreshToken()', () => {
     const dto = { refreshToken: 'old-refresh-token' };
 
-    it('should throw if token verification fails', async () => {
+    it('should throw UnauthorizedException when refresh token verification fails', async () => {
       jwtService.verify.mockImplementation(() => {
         throw new Error('expired');
       });
@@ -212,7 +212,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if token not found in DB (revoked)', async () => {
+    it('should throw UnauthorizedException when refresh token is not found in database', async () => {
       jwtService.verify.mockReturnValue({
         sub: 'user-1',
         email: 'test@test.com',
@@ -224,7 +224,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should delete old token and return new pair on success', async () => {
+    it('should delete old token and return new token pair when refresh token is valid', async () => {
       jwtService.verify.mockReturnValue({
         sub: 'user-1',
         email: 'test@test.com',
@@ -251,7 +251,7 @@ describe('AuthService', () => {
   describe('googleLogin()', () => {
     const dto = { idToken: 'google-id-token' };
 
-    it('should throw if Google token is invalid', async () => {
+    it('should throw UnauthorizedException when Google token verification fails', async () => {
       // Access the internal googleClient and make verifyIdToken throw
       (service as any).googleClient.verifyIdToken.mockRejectedValue(
         new Error('invalid'),
@@ -262,7 +262,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if Google payload has no email', async () => {
+    it('should throw BadRequestException when Google token payload is missing email', async () => {
       (service as any).googleClient.verifyIdToken.mockResolvedValue({
         getPayload: () => null,
       });
@@ -272,7 +272,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw if email is registered via another method', async () => {
+    it('should throw BadRequestException when email is already registered via local provider', async () => {
       (service as any).googleClient.verifyIdToken.mockResolvedValue({
         getPayload: () => ({
           email: 'test@test.com',
@@ -290,7 +290,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should return token pair for existing Google user', async () => {
+    it('should return token pair when Google user already exists', async () => {
       const googleUser = mockUser({ authProvider: 'google' });
       (service as any).googleClient.verifyIdToken.mockResolvedValue({
         getPayload: () => ({
@@ -309,7 +309,7 @@ describe('AuthService', () => {
       expect(result).toHaveProperty('accessToken');
     });
 
-    it('should create new user with unique username for new Google user', async () => {
+    it('should create new user and return token pair when Google user is new', async () => {
       (service as any).googleClient.verifyIdToken.mockResolvedValue({
         getPayload: () => ({
           email: 'newgoogle@test.com',
@@ -346,7 +346,7 @@ describe('AuthService', () => {
   // logout()
   // =========================================================================
   describe('logout()', () => {
-    it('should delete specific session when refreshToken provided', async () => {
+    it('should delete specific session when a valid refresh token is provided during logout', async () => {
       prisma.refreshToken.deleteMany.mockResolvedValue({ count: 1 });
 
       const result = await service.logout('user-1', {
@@ -359,7 +359,7 @@ describe('AuthService', () => {
       expect(result).toEqual({ success: true });
     });
 
-    it('should throw if token does not exist (count 0)', async () => {
+    it('should throw BadRequestException when provided refresh token does not exist', async () => {
       prisma.refreshToken.deleteMany.mockResolvedValue({ count: 0 });
 
       await expect(
@@ -367,7 +367,7 @@ describe('AuthService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should delete all sessions when no refreshToken provided', async () => {
+    it('should delete all sessions when no refresh token is provided during logout', async () => {
       prisma.refreshToken.deleteMany.mockResolvedValue({ count: 3 });
 
       const result = await service.logout('user-1');
@@ -383,7 +383,7 @@ describe('AuthService', () => {
   // generateTokenPair() — tested indirectly via register/login
   // =========================================================================
   describe('generateTokenPair (indirect)', () => {
-    it('should sign accessToken and refreshToken with correct secrets', async () => {
+    it('should sign tokens with correct secrets when generating token pair', async () => {
       userService.findByUsername.mockResolvedValue(mockUser());
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       prisma.refreshToken.create.mockResolvedValue({});
@@ -398,7 +398,7 @@ describe('AuthService', () => {
       );
     });
 
-    it('should persist refresh token to database', async () => {
+    it('should persist refresh token to database when generating token pair', async () => {
       userService.findByUsername.mockResolvedValue(mockUser());
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       prisma.refreshToken.create.mockResolvedValue({});
