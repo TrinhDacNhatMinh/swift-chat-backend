@@ -74,12 +74,27 @@ export class ConversationsController {
   // ─── Members ────────────────────────────────────────────────────────────────
 
   @Post(':id/members')
+  @HttpCode(HttpStatus.OK)
   addMembers(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
     @Body() dto: AddMembersDto,
   ) {
     return this.conversationsService.addMembers(user.id, conversationId, dto.userIds);
+  }
+
+  /**
+   * Leave the group yourself.
+   * Leader must transfer leadership or disband before leaving if others still exist.
+   * DELETE /conversations/:id/members/me
+   */
+  @Delete(':id/members/me')
+  @HttpCode(HttpStatus.OK)
+  leaveGroup(
+    @CurrentUser() user: any,
+    @Param('id') conversationId: string,
+  ) {
+    return this.conversationsService.leaveGroup(user.id, conversationId);
   }
 
   /**
@@ -95,20 +110,6 @@ export class ConversationsController {
     @Param('userId') targetUserId: string,
   ) {
     return this.conversationsService.kickMember(user.id, conversationId, targetUserId);
-  }
-
-  /**
-   * Leave the group yourself.
-   * Leader must transfer leadership or disband before leaving if others still exist.
-   * DELETE /conversations/:id/members/me
-   */
-  @Delete(':id/members/me')
-  @HttpCode(HttpStatus.OK)
-  leaveGroup(
-    @CurrentUser() user: any,
-    @Param('id') conversationId: string,
-  ) {
-    return this.conversationsService.leaveGroup(user.id, conversationId);
   }
 
   // ─── Role Management ────────────────────────────────────────────────────────
