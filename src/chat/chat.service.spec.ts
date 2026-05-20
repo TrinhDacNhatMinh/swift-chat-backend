@@ -69,7 +69,7 @@ describe('ChatService', () => {
   // setServer()
   // =========================================================================
   describe('setServer()', () => {
-    it('should set server and pass it to notificationsService and conversationsService', () => {
+    it('should set server and pass it to notificationsService and conversationsService when setServer() is called', () => {
       const server = { to: jest.fn() } as any;
       service.setServer(server);
       expect(notifications.setServer).toHaveBeenCalledWith(server);
@@ -81,7 +81,7 @@ describe('ChatService', () => {
   // joinRoom()
   // =========================================================================
   describe('joinRoom()', () => {
-    it('should return true when user is participant', async () => {
+    it('should return true when user is participant in joinRoom()', async () => {
       conversations.isParticipant.mockResolvedValue(true);
 
       const result = await service.joinRoom('u1', 'c1');
@@ -89,7 +89,7 @@ describe('ChatService', () => {
       expect(result).toBe(true);
     });
 
-    it('should throw WsException when user is not participant', async () => {
+    it('should throw WsException when user is not participant in joinRoom()', async () => {
       conversations.isParticipant.mockResolvedValue(false);
 
       await expect(service.joinRoom('u1', 'c1')).rejects.toThrow(WsException);
@@ -102,7 +102,7 @@ describe('ChatService', () => {
   describe('sendMessage()', () => {
     const dto = { conversationId: 'c1', content: 'hello' };
 
-    it('should throw when conversation does not exist', async () => {
+    it('should throw WsException when conversation does not exist in sendMessage()', async () => {
       conversations.conversationExists.mockResolvedValue(false);
 
       await expect(service.sendMessage('u1', 'User', dto)).rejects.toThrow(
@@ -110,7 +110,7 @@ describe('ChatService', () => {
       );
     });
 
-    it('should throw when user is not participant', async () => {
+    it('should throw WsException when user is not participant in sendMessage()', async () => {
       conversations.conversationExists.mockResolvedValue(true);
       conversations.isParticipant.mockResolvedValue(false);
 
@@ -119,7 +119,7 @@ describe('ChatService', () => {
       );
     });
 
-    it('should save message, update timestamp, and trigger FCM on success', async () => {
+    it('should save message, update timestamp, and trigger FCM when sendMessage() succeeds', async () => {
       conversations.conversationExists.mockResolvedValue(true);
       conversations.isParticipant.mockResolvedValue(true);
       const saved = { _id: 'msg1', content: 'hello' };
@@ -143,7 +143,7 @@ describe('ChatService', () => {
   // deleteMessage()
   // =========================================================================
   describe('deleteMessage()', () => {
-    it('should throw WsException when message not found', async () => {
+    it('should throw WsException when message not found in deleteMessage()', async () => {
       messages.softDelete.mockResolvedValue(null);
 
       await expect(
@@ -154,7 +154,8 @@ describe('ChatService', () => {
       ).rejects.toThrow(WsException);
     });
 
-    it('should return deleted message on success', async () => {
+    it('should return deleted message when deleteMessage() succeeds', async () => {
+      conversations.isParticipant.mockResolvedValue(true);
       const deleted = { _id: 'msg1', is_deleted: true };
       messages.softDelete.mockResolvedValue(deleted);
 
@@ -171,7 +172,7 @@ describe('ChatService', () => {
   // editMessage()
   // =========================================================================
   describe('editMessage()', () => {
-    it('should throw WsException when message not found or deleted', async () => {
+    it('should throw WsException when message not found or deleted in editMessage()', async () => {
       messages.editMessage.mockResolvedValue(null);
 
       await expect(
@@ -183,7 +184,8 @@ describe('ChatService', () => {
       ).rejects.toThrow(WsException);
     });
 
-    it('should return edited message on success', async () => {
+    it('should return edited message when editMessage() succeeds', async () => {
+      conversations.isParticipant.mockResolvedValue(true);
       const edited = { _id: 'msg1', content: 'new', is_edited: true };
       messages.editMessage.mockResolvedValue(edited);
 
@@ -201,7 +203,7 @@ describe('ChatService', () => {
   // markRead()
   // =========================================================================
   describe('markRead()', () => {
-    it('should delegate to conversationsService.markAsRead', async () => {
+    it('should delegate to conversationsService.markAsRead when markRead() is called', async () => {
       await service.markRead('u1', { conversationId: 'c1', messageId: 'msg1' });
 
       expect(conversations.markAsRead).toHaveBeenCalledWith('u1', 'c1', 'msg1');
@@ -212,7 +214,7 @@ describe('ChatService', () => {
   // broadcastPresenceToFriends()
   // =========================================================================
   describe('broadcastPresenceToFriends()', () => {
-    it('should broadcast to all friends in single batch', async () => {
+    it('should broadcast to all friends in single batch when broadcastPresenceToFriends() is called', async () => {
       friends.getFriendIdsBatch
         .mockResolvedValueOnce(['f1', 'f2'])
         .mockResolvedValueOnce([]); // empty = stop
@@ -223,7 +225,7 @@ describe('ChatService', () => {
       expect(mockServer.to).toHaveBeenCalledWith('user:f2');
     });
 
-    it('should iterate multiple batches until empty', async () => {
+    it('should iterate multiple batches until empty when broadcastPresenceToFriends() is called', async () => {
       // First batch returns full batch (100), second returns partial, triggering stop
       const batch1 = Array.from({ length: 100 }, (_, i) => `f${i}`);
       const batch2 = ['fExtra'];
@@ -238,7 +240,7 @@ describe('ChatService', () => {
       expect(friends.getFriendIdsBatch).toHaveBeenCalledWith('u1', 100, 100);
     });
 
-    it('should not throw on error (logs instead)', async () => {
+    it('should not throw on error when broadcastPresenceToFriends() encounters an error', async () => {
       friends.getFriendIdsBatch.mockRejectedValue(new Error('redis down'));
 
       await expect(
@@ -253,21 +255,21 @@ describe('ChatService', () => {
   describe('reactMessage()', () => {
     const dto = { conversationId: 'c1', messageId: 'msg1', emoji: '👍' };
 
-    it('should throw WsException when user is not a participant', async () => {
+    it('should throw WsException when user is not a participant in reactMessage()', async () => {
       conversations.isParticipant.mockResolvedValue(false);
 
       await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
       expect(messages.toggleReaction).not.toHaveBeenCalled();
     });
 
-    it('should throw WsException when message not found', async () => {
+    it('should throw WsException when message not found in reactMessage()', async () => {
       conversations.isParticipant.mockResolvedValue(true);
       messages.toggleReaction.mockResolvedValue(null);
 
       await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
     });
 
-    it('should return updated message on success (add reaction)', async () => {
+    it('should return updated message when reactMessage() successfully adds reaction', async () => {
       conversations.isParticipant.mockResolvedValue(true);
       const updated = { _id: 'msg1', reactions: [{ emoji: '👍', userId: 'u1' }] };
       messages.toggleReaction.mockResolvedValue(updated);
@@ -278,7 +280,7 @@ describe('ChatService', () => {
       expect(result).toEqual(updated);
     });
 
-    it('should return updated message on success (remove reaction)', async () => {
+    it('should return updated message when reactMessage() successfully removes reaction', async () => {
       conversations.isParticipant.mockResolvedValue(true);
       const updated = { _id: 'msg1', reactions: [] };
       messages.toggleReaction.mockResolvedValue(updated);

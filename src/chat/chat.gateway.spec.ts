@@ -87,7 +87,7 @@ describe('ChatGateway', () => {
   // Lifecycle: handleConnection
   // =========================================================================
   describe('handleConnection()', () => {
-    it('should join user room, set presence online, and broadcast on first connection', async () => {
+    it('should join user room, set presence online, and broadcast when first connection is established', async () => {
       const client = createMockSocket();
       redis.incr.mockResolvedValue(1); // first connection
 
@@ -108,7 +108,7 @@ describe('ChatGateway', () => {
       );
     });
 
-    it('should only refresh TTL on subsequent connections (no broadcast)', async () => {
+    it('should only refresh TTL when subsequent connection is established without broadcasting', async () => {
       const client = createMockSocket();
       redis.incr.mockResolvedValue(2); // second connection
 
@@ -125,7 +125,7 @@ describe('ChatGateway', () => {
   // Lifecycle: handleDisconnect
   // =========================================================================
   describe('handleDisconnect()', () => {
-    it('should cleanup presence, broadcast offline, and update lastSeen on last disconnect', async () => {
+    it('should cleanup presence, broadcast offline, and update lastSeen when last connection disconnects', async () => {
       const client = createMockSocket();
       redis.decr.mockResolvedValue(0); // last connection gone
 
@@ -141,7 +141,7 @@ describe('ChatGateway', () => {
       expect(userService.updateLastSeen).toHaveBeenCalledWith('u1');
     });
 
-    it('should only decrement count when other connections remain', async () => {
+    it('should only decrement count when other connections remain in handleDisconnect()', async () => {
       const client = createMockSocket();
       redis.decr.mockResolvedValue(1); // still has connections
 
@@ -152,7 +152,7 @@ describe('ChatGateway', () => {
       expect(userService.updateLastSeen).not.toHaveBeenCalled();
     });
 
-    it('should return early when userId is not set', async () => {
+    it('should return early when userId is not set in handleDisconnect()', async () => {
       const client = createMockSocket({ data: {} });
 
       await gateway.handleDisconnect(client as any);
@@ -160,7 +160,7 @@ describe('ChatGateway', () => {
       expect(redis.decr).not.toHaveBeenCalled();
     });
 
-    it('should not throw when updateLastSeen fails', async () => {
+    it('should not throw when updateLastSeen fails in handleDisconnect()', async () => {
       const client = createMockSocket();
       redis.decr.mockResolvedValue(0);
       userService.updateLastSeen.mockRejectedValue(new Error('db error'));
@@ -175,7 +175,7 @@ describe('ChatGateway', () => {
   // Event: chat:join_room
   // =========================================================================
   describe('handleJoinRoom()', () => {
-    it('should join room and return success', async () => {
+    it('should join room and return success when handleJoinRoom() is called', async () => {
       const client = createMockSocket();
       const result = await gateway.handleJoinRoom(
         { conversationId: 'c1' },
@@ -192,7 +192,7 @@ describe('ChatGateway', () => {
   // Event: chat:leave_room
   // =========================================================================
   describe('handleLeaveRoom()', () => {
-    it('should leave room and return success', async () => {
+    it('should leave room and return success when handleLeaveRoom() is called', async () => {
       const client = createMockSocket();
       const result = await gateway.handleLeaveRoom(
         { conversationId: 'c1' },
@@ -208,7 +208,7 @@ describe('ChatGateway', () => {
   // Event: chat:typing / chat:stop_typing
   // =========================================================================
   describe('handleTyping()', () => {
-    it('should emit typing event to conversation room', async () => {
+    it('should emit typing event to conversation room when handleTyping() is called', async () => {
       const mockEmit = jest.fn();
       const client = createMockSocket({
         to: jest.fn().mockReturnValue({ emit: mockEmit }),
@@ -228,7 +228,7 @@ describe('ChatGateway', () => {
   });
 
   describe('handleStopTyping()', () => {
-    it('should emit stop_typing event to conversation room', async () => {
+    it('should emit stop_typing event to conversation room when handleStopTyping() is called', async () => {
       const mockEmit = jest.fn();
       const client = createMockSocket({
         to: jest.fn().mockReturnValue({ emit: mockEmit }),
@@ -250,7 +250,7 @@ describe('ChatGateway', () => {
   // Event: chat:send_message
   // =========================================================================
   describe('handleSendMessage()', () => {
-    it('should save message, emit to room, and return messageId', async () => {
+    it('should save message, emit to room, and return messageId when handleSendMessage() succeeds', async () => {
       const dto = {
         conversationId: 'c1',
         content: 'hello',
@@ -289,7 +289,7 @@ describe('ChatGateway', () => {
   // Event: chat:delete_message
   // =========================================================================
   describe('handleDeleteMessage()', () => {
-    it('should delete message and emit to room', async () => {
+    it('should delete message and emit to room when handleDeleteMessage() is called', async () => {
       const dto = { conversationId: 'c1', messageId: 'msg1' };
       const serverEmit = jest.fn();
       gateway.server = {
@@ -316,7 +316,7 @@ describe('ChatGateway', () => {
   // Event: chat:edit_message
   // =========================================================================
   describe('handleEditMessage()', () => {
-    it('should edit message and emit to room', async () => {
+    it('should edit message and emit to room when handleEditMessage() is called', async () => {
       const dto = {
         conversationId: 'c1',
         messageId: 'msg1',
@@ -348,7 +348,7 @@ describe('ChatGateway', () => {
   // Event: chat:mark_read
   // =========================================================================
   describe('handleMarkRead()', () => {
-    it('should mark read and emit read receipt', async () => {
+    it('should mark read and emit read receipt when handleMarkRead() is called', async () => {
       const dto = { conversationId: 'c1', messageId: 'msg1' };
       const clientEmit = jest.fn();
       const client = createMockSocket({
@@ -375,7 +375,7 @@ describe('ChatGateway', () => {
   // Event: chat:react_message
   // =========================================================================
   describe('handleReactMessage()', () => {
-    it('should react to message and emit to room', async () => {
+    it('should react to message and emit to room when handleReactMessage() is called', async () => {
       const dto = {
         conversationId: 'c1',
         messageId: 'msg1',
@@ -409,7 +409,7 @@ describe('ChatGateway', () => {
   // Event: chat:heartbeat
   // =========================================================================
   describe('handleHeartbeat()', () => {
-    it('should refresh presence and connection count TTL', async () => {
+    it('should refresh presence and connection count TTL when handleHeartbeat() is called', async () => {
       const client = createMockSocket();
 
       const result = await gateway.handleHeartbeat(client as any);
@@ -419,7 +419,7 @@ describe('ChatGateway', () => {
       expect(result).toEqual({ status: 'ok' });
     });
 
-    it('should return early when userId is not set', async () => {
+    it('should return early when userId is not set in handleHeartbeat()', async () => {
       const client = createMockSocket({ data: {} });
 
       await gateway.handleHeartbeat(client as any);
