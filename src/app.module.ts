@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { configModuleOptions } from '../config/env';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -19,6 +20,15 @@ import { FcmModule } from './fcm/fcm.module';
 @Module({
   imports: [
     ConfigModule.forRoot(configModuleOptions),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => [
+        {
+          ttl: config.get<number>('THROTTLE_TTL', 60000),
+          limit: config.get<number>('THROTTLE_LIMIT', 100),
+        },
+      ],
+    }),
     PrismaModule,
     DatabaseModule,
     RedisModule,
