@@ -12,16 +12,21 @@ import {
   Query,
   ForbiddenException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiUnauthorizedResponse, ApiForbiddenResponse, ApiNotFoundResponse } from '@nestjs/swagger';
 import { ConversationsService } from './conversations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { CreateConversationDto } from './dto/create-conversation.dto';
-import { PaginationDto } from './dto/pagination.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { AddMembersDto } from './dto/add-members.dto';
 import { TransferRoleDto } from './dto/transfer-role.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 import { TransferLeadershipDto } from './dto/transfer-leadership.dto';
+import { ConversationResponseDto, ConversationListResponseDto, ReadReceiptResponseDto } from './dto/conversation-response.dto';
+import { SuccessResponseDto } from '../common/dto/success-response.dto';
 
+@ApiTags('Conversations')
+@ApiBearerAuth()
 @Controller('conversations')
 @UseGuards(JwtAuthGuard)
 export class ConversationsController {
@@ -31,11 +36,18 @@ export class ConversationsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new conversation' })
+  @ApiResponse({ status: 201, description: 'Conversation created', type: ConversationResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   create(@CurrentUser() user: any, @Body() dto: CreateConversationDto) {
     return this.conversationsService.createConversation(user.id, dto);
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get all conversations for current user' })
+  @ApiResponse({ status: 200, description: 'List of conversations', type: ConversationListResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   findAll(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
     return this.conversationsService.getUserConversations(
       user.id,
@@ -53,6 +65,11 @@ export class ConversationsController {
    */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete or leave a conversation' })
+  @ApiResponse({ status: 200, description: 'Conversation deleted/left', type: SuccessResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   deleteConversation(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -63,6 +80,12 @@ export class ConversationsController {
   // ─── Group Info ─────────────────────────────────────────────────────────────
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update group conversation info' })
+  @ApiResponse({ status: 200, description: 'Group info updated', type: ConversationResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   updateGroupInfo(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -75,6 +98,12 @@ export class ConversationsController {
 
   @Post(':id/members')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add members to group' })
+  @ApiResponse({ status: 200, description: 'Members added', type: SuccessResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   addMembers(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -90,6 +119,10 @@ export class ConversationsController {
    */
   @Delete(':id/members/me')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Leave the group' })
+  @ApiResponse({ status: 200, description: 'Left group', type: SuccessResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   leaveGroup(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -104,6 +137,11 @@ export class ConversationsController {
    */
   @Delete(':id/members/:userId')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Kick member from group' })
+  @ApiResponse({ status: 200, description: 'Member kicked', type: SuccessResponseDto })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   kickMember(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -120,6 +158,12 @@ export class ConversationsController {
    * PATCH /conversations/:id/members/:userId/role
    */
   @Patch(':id/members/:userId/role')
+  @ApiOperation({ summary: 'Update member role (promote/demote)' })
+  @ApiResponse({ status: 200, description: 'Role updated', type: SuccessResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   updateMemberRole(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -136,6 +180,12 @@ export class ConversationsController {
    */
   @Post(':id/transfer-leadership')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Transfer group leadership' })
+  @ApiResponse({ status: 200, description: 'Leadership transferred', type: SuccessResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   transferLeadership(
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
@@ -147,6 +197,11 @@ export class ConversationsController {
   // ─── Read Receipts ──────────────────────────────────────────────────────────
 
   @Get(':conversationId/read-receipts')
+  @ApiOperation({ summary: 'Get read receipts for conversation' })
+  @ApiResponse({ status: 200, description: 'List of read receipts', type: [ReadReceiptResponseDto] })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   async getReadReceipts(
     @CurrentUser() user: any,
     @Param('conversationId') conversationId: string,
