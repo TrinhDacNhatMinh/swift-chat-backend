@@ -6,13 +6,17 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiUnauthorizedResponse, ApiForbiddenResponse, ApiNotFoundResponse } from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetMessagesDto } from './dto/get-messages.dto';
 import { SearchMessagesDto } from './dto/search-messages.dto';
+import { MessageListResponseDto } from './dto/message-response.dto';
 import { ConversationsService } from '../conversations/conversations.service';
 
+@ApiTags('Messages')
+@ApiBearerAuth()
 @Controller('conversations/:conversationId/messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
@@ -22,6 +26,12 @@ export class MessagesController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Get messages for a conversation' })
+  @ApiResponse({ status: 200, description: 'List of messages', type: MessageListResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden (Not a member of the conversation)' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   async findAll(
     @CurrentUser() user: { id: string },
     @Param('conversationId') conversationId: string,
@@ -43,6 +53,12 @@ export class MessagesController {
   }
 
   @Get('search')
+  @ApiOperation({ summary: 'Search messages in a conversation' })
+  @ApiResponse({ status: 200, description: 'Search results', type: MessageListResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ApiForbiddenResponse({ description: 'Forbidden (Not a member of the conversation)' })
+  @ApiNotFoundResponse({ description: 'Not Found' })
   async searchMessages(
     @CurrentUser() user: { id: string },
     @Param('conversationId') conversationId: string,

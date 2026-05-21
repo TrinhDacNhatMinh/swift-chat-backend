@@ -6,9 +6,20 @@ import {
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiConsumes,
+  ApiBody,
+  ApiResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UploadService } from './upload.service';
+import { UploadResponseDto } from './dto/upload-response.dto';
 
 // Fix #3: Whitelist of allowed MIME types
 const ALLOWED_MIME_TYPES = [
@@ -37,12 +48,27 @@ const ALLOWED_MIME_TYPES = [
   'audio/ogg',
 ];
 
+@ApiTags('Upload')
+@ApiBearerAuth()
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Upload a file (image, video, document, audio, archive)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
@@ -59,6 +85,9 @@ export class UploadController {
       },
     }),
   )
+  @ApiResponse({ status: 201, description: 'Image uploaded successfully', type: UploadResponseDto })
+  @ApiBadRequestResponse({ description: 'Bad Request (No file uploaded)' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('No file provided');
