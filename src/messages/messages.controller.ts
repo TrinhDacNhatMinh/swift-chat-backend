@@ -6,7 +6,16 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiUnauthorizedResponse, ApiForbiddenResponse, ApiNotFoundResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+} from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -27,10 +36,16 @@ export class MessagesController {
 
   @Get()
   @ApiOperation({ summary: 'Get messages for a conversation' })
-  @ApiResponse({ status: 200, description: 'List of messages', type: MessageListResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'List of messages',
+    type: MessageListResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  @ApiForbiddenResponse({ description: 'Forbidden (Not a member of the conversation)' })
+  @ApiForbiddenResponse({
+    description: 'Forbidden (Not a member of the conversation)',
+  })
   @ApiNotFoundResponse({ description: 'Not Found' })
   async findAll(
     @CurrentUser() user: { id: string },
@@ -54,10 +69,16 @@ export class MessagesController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search messages in a conversation' })
-  @ApiResponse({ status: 200, description: 'Search results', type: MessageListResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Search results',
+    type: MessageListResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
-  @ApiForbiddenResponse({ description: 'Forbidden (Not a member of the conversation)' })
+  @ApiForbiddenResponse({
+    description: 'Forbidden (Not a member of the conversation)',
+  })
   @ApiNotFoundResponse({ description: 'Not Found' })
   async searchMessages(
     @CurrentUser() user: { id: string },

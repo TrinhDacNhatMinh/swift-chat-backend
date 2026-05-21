@@ -12,7 +12,16 @@ import {
   Query,
   ForbiddenException,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBadRequestResponse, ApiUnauthorizedResponse, ApiForbiddenResponse, ApiNotFoundResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiBadRequestResponse,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+} from '@nestjs/swagger';
 import { ConversationsService } from './conversations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -22,7 +31,11 @@ import { AddMembersDto } from './dto/add-members.dto';
 import { TransferRoleDto } from './dto/transfer-role.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { TransferLeadershipDto } from './dto/transfer-leadership.dto';
-import { ConversationResponseDto, ConversationListResponseDto, ReadReceiptResponseDto } from './dto/conversation-response.dto';
+import {
+  ConversationResponseDto,
+  ConversationListResponseDto,
+  ReadReceiptResponseDto,
+} from './dto/conversation-response.dto';
 import { SuccessResponseDto } from '../common/dto/success-response.dto';
 
 @ApiTags('Conversations')
@@ -37,7 +50,11 @@ export class ConversationsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a new conversation' })
-  @ApiResponse({ status: 201, description: 'Conversation created', type: ConversationResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Conversation created',
+    type: ConversationResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   create(@CurrentUser() user: any, @Body() dto: CreateConversationDto) {
@@ -46,7 +63,11 @@ export class ConversationsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all conversations for current user' })
-  @ApiResponse({ status: 200, description: 'List of conversations', type: ConversationListResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'List of conversations',
+    type: ConversationListResponseDto,
+  })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   findAll(@CurrentUser() user: any, @Query() pagination: PaginationDto) {
     return this.conversationsService.getUserConversations(
@@ -66,7 +87,11 @@ export class ConversationsController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete or leave a conversation' })
-  @ApiResponse({ status: 200, description: 'Conversation deleted/left', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation deleted/left',
+    type: SuccessResponseDto,
+  })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiNotFoundResponse({ description: 'Not Found' })
@@ -74,14 +99,21 @@ export class ConversationsController {
     @CurrentUser() user: any,
     @Param('id') conversationId: string,
   ) {
-    return this.conversationsService.deleteConversation(user.id, conversationId);
+    return this.conversationsService.deleteConversation(
+      user.id,
+      conversationId,
+    );
   }
 
   // ─── Group Info ─────────────────────────────────────────────────────────────
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update group conversation info' })
-  @ApiResponse({ status: 200, description: 'Group info updated', type: ConversationResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Group info updated',
+    type: ConversationResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -91,7 +123,11 @@ export class ConversationsController {
     @Param('id') conversationId: string,
     @Body() dto: UpdateGroupDto,
   ) {
-    return this.conversationsService.updateGroupInfo(user.id, conversationId, dto);
+    return this.conversationsService.updateGroupInfo(
+      user.id,
+      conversationId,
+      dto,
+    );
   }
 
   // ─── Members ────────────────────────────────────────────────────────────────
@@ -99,7 +135,11 @@ export class ConversationsController {
   @Post(':id/members')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Add members to group' })
-  @ApiResponse({ status: 200, description: 'Members added', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Members added',
+    type: SuccessResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -109,7 +149,11 @@ export class ConversationsController {
     @Param('id') conversationId: string,
     @Body() dto: AddMembersDto,
   ) {
-    return this.conversationsService.addMembers(user.id, conversationId, dto.userIds);
+    return this.conversationsService.addMembers(
+      user.id,
+      conversationId,
+      dto.userIds,
+    );
   }
 
   /**
@@ -120,13 +164,14 @@ export class ConversationsController {
   @Delete(':id/members/me')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Leave the group' })
-  @ApiResponse({ status: 200, description: 'Left group', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Left group',
+    type: SuccessResponseDto,
+  })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiNotFoundResponse({ description: 'Not Found' })
-  leaveGroup(
-    @CurrentUser() user: any,
-    @Param('id') conversationId: string,
-  ) {
+  leaveGroup(@CurrentUser() user: any, @Param('id') conversationId: string) {
     return this.conversationsService.leaveGroup(user.id, conversationId);
   }
 
@@ -138,7 +183,11 @@ export class ConversationsController {
   @Delete(':id/members/:userId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Kick member from group' })
-  @ApiResponse({ status: 200, description: 'Member kicked', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Member kicked',
+    type: SuccessResponseDto,
+  })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiNotFoundResponse({ description: 'Not Found' })
@@ -147,7 +196,11 @@ export class ConversationsController {
     @Param('id') conversationId: string,
     @Param('userId') targetUserId: string,
   ) {
-    return this.conversationsService.kickMember(user.id, conversationId, targetUserId);
+    return this.conversationsService.kickMember(
+      user.id,
+      conversationId,
+      targetUserId,
+    );
   }
 
   // ─── Role Management ────────────────────────────────────────────────────────
@@ -159,7 +212,11 @@ export class ConversationsController {
    */
   @Patch(':id/members/:userId/role')
   @ApiOperation({ summary: 'Update member role (promote/demote)' })
-  @ApiResponse({ status: 200, description: 'Role updated', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Role updated',
+    type: SuccessResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -170,7 +227,12 @@ export class ConversationsController {
     @Param('userId') targetUserId: string,
     @Body() dto: TransferRoleDto,
   ) {
-    return this.conversationsService.updateMemberRole(user.id, conversationId, targetUserId, dto.role);
+    return this.conversationsService.updateMemberRole(
+      user.id,
+      conversationId,
+      targetUserId,
+      dto.role,
+    );
   }
 
   /**
@@ -181,7 +243,11 @@ export class ConversationsController {
   @Post(':id/transfer-leadership')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Transfer group leadership' })
-  @ApiResponse({ status: 200, description: 'Leadership transferred', type: SuccessResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Leadership transferred',
+    type: SuccessResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
@@ -191,14 +257,22 @@ export class ConversationsController {
     @Param('id') conversationId: string,
     @Body() dto: TransferLeadershipDto,
   ) {
-    return this.conversationsService.transferLeadership(user.id, conversationId, dto.newLeaderId);
+    return this.conversationsService.transferLeadership(
+      user.id,
+      conversationId,
+      dto.newLeaderId,
+    );
   }
 
   // ─── Read Receipts ──────────────────────────────────────────────────────────
 
   @Get(':conversationId/read-receipts')
   @ApiOperation({ summary: 'Get read receipts for conversation' })
-  @ApiResponse({ status: 200, description: 'List of read receipts', type: [ReadReceiptResponseDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of read receipts',
+    type: [ReadReceiptResponseDto],
+  })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   @ApiForbiddenResponse({ description: 'Forbidden' })
   @ApiNotFoundResponse({ description: 'Not Found' })

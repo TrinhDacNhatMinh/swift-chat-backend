@@ -169,7 +169,10 @@ export class ConversationsService {
     });
   }
 
-  async getParticipantRole(userId: string, conversationId: string): Promise<ParticipantRole | null> {
+  async getParticipantRole(
+    userId: string,
+    conversationId: string,
+  ): Promise<ParticipantRole | null> {
     const participant = await this.prisma.participant.findUnique({
       where: {
         conversationId_userId: { conversationId, userId },
@@ -184,13 +187,20 @@ export class ConversationsService {
       select: { type: true, deletedAt: true },
     });
     if (!conversation) throw new NotFoundException('Conversation not found');
-    if (conversation.deletedAt) throw new BadRequestException('This group has been disbanded');
+    if (conversation.deletedAt)
+      throw new BadRequestException('This group has been disbanded');
     if (conversation.type !== ConversationType.GROUP) {
-      throw new BadRequestException('This feature is only supported for group chats');
+      throw new BadRequestException(
+        'This feature is only supported for group chats',
+      );
     }
   }
 
-  async updateGroupInfo(actorId: string, conversationId: string, dto: UpdateGroupDto) {
+  async updateGroupInfo(
+    actorId: string,
+    conversationId: string,
+    dto: UpdateGroupDto,
+  ) {
     await this.ensureGroupConversation(conversationId);
     const role = await this.getParticipantRole(actorId, conversationId);
     if (!role) {
@@ -206,12 +216,14 @@ export class ConversationsService {
     });
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:info_updated', {
-        conversationId,
-        title: conversation.title,
-        avatarUrl: conversation.avatarUrl,
-        updatedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:info_updated', {
+          conversationId,
+          title: conversation.title,
+          avatarUrl: conversation.avatarUrl,
+          updatedBy: actorId,
+        });
     }
 
     return conversation;
@@ -233,13 +245,13 @@ export class ConversationsService {
       },
       select: { userId: true },
     });
-    const existingIds = existing.map(e => e.userId);
-    const newIds = distinctIds.filter(id => !existingIds.includes(id));
+    const existingIds = existing.map((e) => e.userId);
+    const newIds = distinctIds.filter((id) => !existingIds.includes(id));
 
     if (newIds.length === 0) return { success: true, added: 0 };
 
     await this.prisma.participant.createMany({
-      data: newIds.map(userId => ({
+      data: newIds.map((userId) => ({
         conversationId,
         userId,
         role: ParticipantRole.MEMBER,
@@ -247,13 +259,15 @@ export class ConversationsService {
     });
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:member_added', {
-        conversationId,
-        addedUserIds: newIds,
-        addedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:member_added', {
+          conversationId,
+          addedUserIds: newIds,
+          addedBy: actorId,
+        });
       // Notify new members to join the room on client side
-      newIds.forEach(id => {
+      newIds.forEach((id) => {
         this.server.to(`user:${id}`).emit('group:you_added', {
           conversationId,
           addedBy: actorId,
@@ -264,15 +278,22 @@ export class ConversationsService {
     return { success: true, added: newIds.length, userIds: newIds };
   }
 
-  async kickMember(actorId: string, conversationId: string, targetUserId: string) {
+  async kickMember(
+    actorId: string,
+    conversationId: string,
+    targetUserId: string,
+  ) {
     await this.ensureGroupConversation(conversationId);
 
     if (actorId === targetUserId) {
-      throw new BadRequestException('Cannot kick yourself. Use the leave endpoint instead.');
+      throw new BadRequestException(
+        'Cannot kick yourself. Use the leave endpoint instead.',
+      );
     }
 
     const actorRole = await this.getParticipantRole(actorId, conversationId);
-    if (!actorRole) throw new ForbiddenException('You are not a member of this conversation');
+    if (!actorRole)
+      throw new ForbiddenException('You are not a member of this conversation');
 
     if (actorRole === ParticipantRole.MEMBER) {
       throw new ForbiddenException('Members cannot remove other users');
@@ -280,22 +301,29 @@ export class ConversationsService {
 
     // Deputy can only kick members, not other deputies or the leader
     if (actorRole === ParticipantRole.DEPUTY) {
-      const targetRole = await this.getParticipantRole(targetUserId, conversationId);
+      const targetRole = await this.getParticipantRole(
+        targetUserId,
+        conversationId,
+      );
       if (targetRole !== ParticipantRole.MEMBER) {
         throw new ForbiddenException('Deputies can only remove members');
       }
     }
 
     await this.prisma.participant.delete({
-      where: { conversationId_userId: { conversationId, userId: targetUserId } },
+      where: {
+        conversationId_userId: { conversationId, userId: targetUserId },
+      },
     });
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:member_removed', {
-        conversationId,
-        removedUserId: targetUserId,
-        removedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:member_removed', {
+          conversationId,
+          removedUserId: targetUserId,
+          removedBy: actorId,
+        });
     }
 
     return { success: true, removedUserId: targetUserId };
@@ -305,7 +333,8 @@ export class ConversationsService {
     await this.ensureGroupConversation(conversationId);
 
     const actorRole = await this.getParticipantRole(actorId, conversationId);
-    if (!actorRole) throw new ForbiddenException('You are not a member of this conversation');
+    if (!actorRole)
+      throw new ForbiddenException('You are not a member of this conversation');
 
     // Leader must resolve group ownership before leaving
     if (actorRole === ParticipantRole.LEADER) {
@@ -315,8 +344,8 @@ export class ConversationsService {
       if (otherMembersCount > 0) {
         throw new BadRequestException(
           'You are the leader and the group still has members. ' +
-          'Transfer leadership via POST /conversations/:id/transfer-leadership, ' +
-          'or disband the group via DELETE /conversations/:id.',
+            'Transfer leadership via POST /conversations/:id/transfer-leadership, ' +
+            'or disband the group via DELETE /conversations/:id.',
         );
       }
     }
@@ -326,11 +355,13 @@ export class ConversationsService {
     });
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:member_removed', {
-        conversationId,
-        removedUserId: actorId,
-        removedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:member_removed', {
+          conversationId,
+          removedUserId: actorId,
+          removedBy: actorId,
+        });
     }
 
     return { success: true };
@@ -359,7 +390,11 @@ export class ConversationsService {
     return { success: true, disbanded: true };
   }
 
-  async transferLeadership(actorId: string, conversationId: string, newLeaderId: string) {
+  async transferLeadership(
+    actorId: string,
+    conversationId: string,
+    newLeaderId: string,
+  ) {
     await this.ensureGroupConversation(conversationId);
 
     if (actorId === newLeaderId) {
@@ -371,8 +406,14 @@ export class ConversationsService {
       throw new ForbiddenException('Only the leader can transfer leadership');
     }
 
-    const targetRole = await this.getParticipantRole(newLeaderId, conversationId);
-    if (!targetRole) throw new NotFoundException('Target user is not a member of this conversation');
+    const targetRole = await this.getParticipantRole(
+      newLeaderId,
+      conversationId,
+    );
+    if (!targetRole)
+      throw new NotFoundException(
+        'Target user is not a member of this conversation',
+      );
 
     // Atomic swap: demote current leader → member, promote target → leader
     await this.prisma.$transaction([
@@ -381,24 +422,33 @@ export class ConversationsService {
         data: { role: ParticipantRole.MEMBER },
       }),
       this.prisma.participant.update({
-        where: { conversationId_userId: { conversationId, userId: newLeaderId } },
+        where: {
+          conversationId_userId: { conversationId, userId: newLeaderId },
+        },
         data: { role: ParticipantRole.LEADER },
       }),
     ]);
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:role_changed', {
-        conversationId,
-        targetUserId: newLeaderId,
-        newRole: ParticipantRole.LEADER,
-        changedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:role_changed', {
+          conversationId,
+          targetUserId: newLeaderId,
+          newRole: ParticipantRole.LEADER,
+          changedBy: actorId,
+        });
     }
 
     return { success: true, newLeaderId };
   }
 
-  async updateMemberRole(actorId: string, conversationId: string, targetUserId: string, newRole: ParticipantRole) {
+  async updateMemberRole(
+    actorId: string,
+    conversationId: string,
+    targetUserId: string,
+    newRole: ParticipantRole,
+  ) {
     await this.ensureGroupConversation(conversationId);
     const actorRole = await this.getParticipantRole(actorId, conversationId);
     if (actorRole !== ParticipantRole.LEADER) {
@@ -407,11 +457,19 @@ export class ConversationsService {
 
     // Cannot assign leader role via this method — use POST /conversations/:id/transfer-leadership instead
     if (newRole === ParticipantRole.LEADER) {
-      throw new BadRequestException('Cannot assign leader role directly. Use POST /conversations/:id/transfer-leadership instead.');
+      throw new BadRequestException(
+        'Cannot assign leader role directly. Use POST /conversations/:id/transfer-leadership instead.',
+      );
     }
 
-    const targetRole = await this.getParticipantRole(targetUserId, conversationId);
-    if (!targetRole) throw new NotFoundException('Target user is not a member of this conversation');
+    const targetRole = await this.getParticipantRole(
+      targetUserId,
+      conversationId,
+    );
+    if (!targetRole)
+      throw new NotFoundException(
+        'Target user is not a member of this conversation',
+      );
 
     await this.prisma.participant.update({
       where: {
@@ -421,12 +479,14 @@ export class ConversationsService {
     });
 
     if (this.server) {
-      this.server.to(`conversation:${conversationId}`).emit('group:role_changed', {
-        conversationId,
-        targetUserId,
-        newRole,
-        changedBy: actorId,
-      });
+      this.server
+        .to(`conversation:${conversationId}`)
+        .emit('group:role_changed', {
+          conversationId,
+          targetUserId,
+          newRole,
+          changedBy: actorId,
+        });
     }
 
     return { success: true, targetUserId, newRole };
@@ -500,7 +560,9 @@ export class ConversationsService {
       where: { conversationId_userId: { conversationId, userId } },
     });
     if (!participant) {
-      throw new ForbiddenException('You are not a participant of this conversation');
+      throw new ForbiddenException(
+        'You are not a participant of this conversation',
+      );
     }
 
     await this.prisma.participant.update({

@@ -204,7 +204,7 @@ export class AuthService {
           expiresIn: this.configService.getOrThrow<string>(
             'JWT_REFRESH_EXPIRES_IN',
           ) as any,
-        }
+        },
       ),
     ]);
 

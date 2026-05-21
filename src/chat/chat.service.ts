@@ -84,7 +84,9 @@ export class ChatService {
       dto.conversationId,
     );
     if (!isParticipant) {
-      throw new WsException('Permission denied: you are not a member of this conversation');
+      throw new WsException(
+        'Permission denied: you are not a member of this conversation',
+      );
     }
 
     const deleted = await this.messagesService.softDelete(
@@ -104,7 +106,9 @@ export class ChatService {
       dto.conversationId,
     );
     if (!isParticipant) {
-      throw new WsException('Permission denied: you are not a member of this conversation');
+      throw new WsException(
+        'Permission denied: you are not a member of this conversation',
+      );
     }
 
     const edited = await this.messagesService.editMessage(

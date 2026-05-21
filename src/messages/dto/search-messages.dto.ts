@@ -1,4 +1,12 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class SearchMessagesDto {

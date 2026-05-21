@@ -6,7 +6,12 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { SuccessResponseDto } from '../common/dto/success-response.dto';
 import { AuthService } from './auth.service';
@@ -29,8 +34,15 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
-  @ApiResponse({ status: 201, description: 'User successfully registered', type: AuthResponseDto })
-  @ApiResponse({ status: 400, description: 'Bad Request (e.g. Email/Username already in use)' })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully registered',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request (e.g. Email/Username already in use)',
+  })
   register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -38,8 +50,15 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
-  @ApiResponse({ status: 200, description: 'Successfully logged in', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Invalid credentials)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully logged in',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (Invalid credentials)',
+  })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
   }
@@ -47,8 +66,15 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  @ApiResponse({ status: 200, description: 'Successfully refreshed token', type: AuthResponseDto })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Invalid or expired refresh token)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully refreshed token',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (Invalid or expired refresh token)',
+  })
   refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.authService.refreshToken(refreshTokenDto);
   }
@@ -56,9 +82,20 @@ export class AuthController {
   @Post('google')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Google login/register' })
-  @ApiResponse({ status: 200, description: 'Successfully logged in via Google', type: AuthResponseDto })
-  @ApiResponse({ status: 400, description: 'Bad Request (Invalid Google payload or already registered via local)' })
-  @ApiResponse({ status: 401, description: 'Unauthorized (Invalid Google token)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully logged in via Google',
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Bad Request (Invalid Google payload or already registered via local)',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized (Invalid Google token)',
+  })
   googleLogin(@Body() googleAuthDto: GoogleAuthDto) {
     return this.authService.googleLogin(googleAuthDto);
   }
@@ -68,8 +105,15 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout user' })
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({ status: 200, description: 'Successfully logged out', type: SuccessResponseDto })
-  @ApiResponse({ status: 400, description: 'Bad Request (Invalid token or already logged out)' })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully logged out',
+    type: SuccessResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request (Invalid token or already logged out)',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   logout(
     @CurrentUser() user: any,
@@ -82,7 +126,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Register FCM device token' })
-  @ApiResponse({ status: 201, description: 'Device token successfully registered' })
+  @ApiResponse({
+    status: 201,
+    description: 'Device token successfully registered',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   registerDevice(@CurrentUser() user: any, @Body() dto: RegisterDeviceDto) {
     return this.fcmService.registerDevice(user.id, dto.token, dto.platform);

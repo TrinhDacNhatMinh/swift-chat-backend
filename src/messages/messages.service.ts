@@ -21,8 +21,13 @@ export class MessagesService {
     let replyTo: any = null;
 
     if (dto.replyToMessageId) {
-      const originalMessage = await this.messageModel.findById(dto.replyToMessageId);
-      if (originalMessage && originalMessage.conversation_id === dto.conversationId) {
+      const originalMessage = await this.messageModel.findById(
+        dto.replyToMessageId,
+      );
+      if (
+        originalMessage &&
+        originalMessage.conversation_id === dto.conversationId
+      ) {
         replyTo = {
           messageId: originalMessage._id.toString(),
           senderId: originalMessage.sender_id,

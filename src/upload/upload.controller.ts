@@ -56,7 +56,9 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Upload a file (image, video, document, audio, archive)' })
+  @ApiOperation({
+    summary: 'Upload a file (image, video, document, audio, archive)',
+  })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -85,7 +87,11 @@ export class UploadController {
       },
     }),
   )
-  @ApiResponse({ status: 201, description: 'Image uploaded successfully', type: UploadResponseDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Image uploaded successfully',
+    type: UploadResponseDto,
+  })
   @ApiBadRequestResponse({ description: 'Bad Request (No file uploaded)' })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
