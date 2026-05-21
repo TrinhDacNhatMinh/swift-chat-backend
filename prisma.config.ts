@@ -1,8 +1,7 @@
 import { defineConfig } from 'prisma/config';
-import { config } from 'dotenv';
+import { loadEnvFile } from './config/env';
 
-// Load the appropriate .env file based on NODE_ENV, default to development
-config({ path: `.env.${process.env.NODE_ENV || 'development'}` });
+loadEnvFile();
 
 const databaseUrl = process.env.POSTGRESQL;
 if (!databaseUrl) throw new Error('POSTGRESQL environment variable is not set');

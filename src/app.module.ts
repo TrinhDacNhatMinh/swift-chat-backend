@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { configModuleOptions } from '../config/env';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -17,10 +18,7 @@ import { FcmModule } from './fcm/fcm.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
-    }),
+    ConfigModule.forRoot(configModuleOptions),
     PrismaModule,
     DatabaseModule,
     RedisModule,

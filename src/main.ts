@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -37,6 +38,8 @@ async function bootstrap() {
   const subClient = app.get(REDIS_SUB_CLIENT);
   app.useWebSocketAdapter(new RedisIoAdapter(app, pubClient, subClient));
 
-  await app.listen(process.env.PORT ?? 3000);
+  const configService = app.get(ConfigService);
+  const port = configService.getOrThrow<number>('PORT');
+  await app.listen(port);
 }
 bootstrap();
