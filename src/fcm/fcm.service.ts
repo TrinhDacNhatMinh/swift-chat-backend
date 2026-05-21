@@ -1,10 +1,10 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as admin from 'firebase-admin';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../redis/redis.module';
-import * as fs from 'fs';
-import * as path from 'path';
+import { resolveFirebaseCredential } from '../../config/firebase-credential';
 
 @Injectable()
 export class FcmService {
@@ -13,6 +13,7 @@ export class FcmService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
     @Inject(REDIS_CLIENT) private readonly redisClient: Redis,
   ) {
     this.initializeFirebase();
@@ -20,21 +21,25 @@ export class FcmService {
 
   private initializeFirebase() {
     try {
-      const serviceAccountPath = path.join(
-        process.cwd(),
-        'serviceAccount.json',
-      );
-      if (fs.existsSync(serviceAccountPath)) {
-        admin.initializeApp({
-          credential: admin.credential.cert(require(serviceAccountPath)),
-        });
-        this.isInitialized = true;
-        this.logger.log('Firebase Admin SDK initialized successfully');
-      } else {
+      const resolved = resolveFirebaseCredential(this.configService);
+      if (!resolved) {
         this.logger.warn(
-          'serviceAccount.json not found. FCM push notifications are disabled. Please add the file to enable offline push notifications.',
+          'Firebase credentials not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY (or legacy serviceAccount.json). FCM push notifications are disabled.',
+        );
+        return;
+      }
+
+      if (resolved.source === 'legacy-file') {
+        this.logger.warn(
+          'serviceAccount.json is deprecated. Prefer FIREBASE_* environment variables.',
         );
       }
+
+      admin.initializeApp({
+        credential: admin.credential.cert(resolved.credential),
+      });
+      this.isInitialized = true;
+      this.logger.log('Firebase Admin SDK initialized successfully');
     } catch (error) {
       this.logger.error('Failed to initialize Firebase Admin', error);
     }

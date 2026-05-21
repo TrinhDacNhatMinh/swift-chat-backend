@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { FcmService } from './fcm.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REDIS_CLIENT } from '../redis/redis.module';
@@ -15,13 +16,11 @@ jest.mock('firebase-admin', () => ({
   }),
 }));
 
-// Mock fs to control serviceAccount.json existence
-jest.mock('fs', () => ({
-  existsSync: jest.fn().mockReturnValue(false),
+jest.mock('../../config/firebase-credential', () => ({
+  resolveFirebaseCredential: jest.fn().mockReturnValue(null),
 }));
 
 import * as admin from 'firebase-admin';
-import * as fs from 'fs';
 
 describe('FcmService', () => {
   let service: FcmService;
@@ -37,6 +36,10 @@ describe('FcmService', () => {
         FcmService,
         { provide: PrismaService, useValue: prisma },
         { provide: REDIS_CLIENT, useValue: redis },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue(undefined) },
+        },
       ],
     }).compile();
     service = module.get<FcmService>(FcmService);
