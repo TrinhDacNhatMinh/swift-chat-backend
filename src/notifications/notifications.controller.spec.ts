@@ -20,15 +20,15 @@ describe('NotificationsController', () => {
     controller = module.get<NotificationsController>(NotificationsController);
   });
 
-  it('should pass user.id and parsed limit to service.getUserNotifications when getUserNotifications() is called', async () => {
+  it('should pass user.id and parsed limit to service.getUserNotifications when getNotifications() is called', async () => {
     service.getUserNotifications.mockResolvedValue([]);
-    await controller.getUserNotifications({ id: 'u1' }, '10');
+    await controller.getNotifications({ id: 'u1' }, '10');
     expect(service.getUserNotifications).toHaveBeenCalledWith('u1', 10);
   });
 
   it('should use default limit 20 to service.getUserNotifications when limit is not provided', async () => {
     service.getUserNotifications.mockResolvedValue([]);
-    await controller.getUserNotifications({ id: 'u1' });
+    await controller.getNotifications({ id: 'u1' });
     expect(service.getUserNotifications).toHaveBeenCalledWith('u1', 20);
   });
 
