@@ -383,12 +383,12 @@ describe('ChatGateway', () => {
       };
       const updatedMessage = { reactions: [{ emoji: '👍', userId: 'u1' }] };
       chatService.reactMessage.mockResolvedValue(updatedMessage);
-      
+
       const serverEmit = jest.fn();
       gateway.server = {
         to: jest.fn().mockReturnValue({ emit: serverEmit }),
       } as any;
-      
+
       const client = createMockSocket();
       const result = await gateway.handleReactMessage(dto, client as any);
 

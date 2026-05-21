@@ -188,9 +188,7 @@ describe('Friends (e2e)', () => {
     });
 
     it('should return 401 when not authenticated', async () => {
-      await request(app.getHttpServer())
-        .get('/api/v1/friends')
-        .expect(401);
+      await request(app.getHttpServer()).get('/api/v1/friends').expect(401);
     });
   });
 

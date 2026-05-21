@@ -102,7 +102,8 @@ export function emitAck<T = unknown>(
 
     // NestJS WsException path: server emits 'exception' instead of calling ack
     const onException = (err: unknown) => {
-      const errObj = typeof err === 'object' && err !== null ? err : { message: err };
+      const errObj =
+        typeof err === 'object' && err !== null ? err : { message: err };
       settle({ status: 'error', ...errObj } as T);
     };
     socket.once('exception', onException);

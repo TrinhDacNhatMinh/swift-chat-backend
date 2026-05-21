@@ -64,14 +64,22 @@ describe('Auth (e2e)', () => {
     it('should return 400 when email is invalid', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ email: 'not-an-email', username: 'newuser1', password: 'Test@123456' })
+        .send({
+          email: 'not-an-email',
+          username: 'newuser1',
+          password: 'Test@123456',
+        })
         .expect(400);
     });
 
     it('should return 400 when password is too short', async () => {
       await request(app.getHttpServer())
         .post('/api/v1/auth/register')
-        .send({ email: 'shortpw@test.com', username: 'newuser2', password: '123' })
+        .send({
+          email: 'shortpw@test.com',
+          username: 'newuser2',
+          password: '123',
+        })
         .expect(400);
     });
 

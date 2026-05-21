@@ -11,25 +11,29 @@ export async function cleanDatabase(app: INestApplication): Promise<void> {
     where: { email: { endsWith: '@test.com' } },
     select: { id: true },
   });
-  
+
   if (testUsers.length === 0) return;
-  const testUserIds = testUsers.map(u => u.id);
+  const testUserIds = testUsers.map((u) => u.id);
 
   // 2. Lấy các conversation chứa test users
   const testParticipants = await prisma.participant.findMany({
     where: { userId: { in: testUserIds } },
     select: { conversationId: true },
   });
-  const testConversationIds = [...new Set(testParticipants.map(p => p.conversationId))];
+  const testConversationIds = [
+    ...new Set(testParticipants.map((p) => p.conversationId)),
+  ];
 
   // 3. Xóa dữ liệu an toàn theo thứ tự FK
   await prisma.deviceToken.deleteMany({
     where: { userId: { in: testUserIds } },
   });
   await prisma.notification.deleteMany({
-    where: { OR: [{ userId: { in: testUserIds } }, { actorId: { in: testUserIds } }] },
+    where: {
+      OR: [{ userId: { in: testUserIds } }, { actorId: { in: testUserIds } }],
+    },
   });
-  
+
   if (testConversationIds.length > 0) {
     await prisma.participant.deleteMany({
       where: { conversationId: { in: testConversationIds } },
@@ -40,10 +44,17 @@ export async function cleanDatabase(app: INestApplication): Promise<void> {
   }
 
   await prisma.friendRequest.deleteMany({
-    where: { OR: [{ senderId: { in: testUserIds } }, { receiverId: { in: testUserIds } }] },
+    where: {
+      OR: [
+        { senderId: { in: testUserIds } },
+        { receiverId: { in: testUserIds } },
+      ],
+    },
   });
   await prisma.friend.deleteMany({
-    where: { OR: [{ userId1: { in: testUserIds } }, { userId2: { in: testUserIds } }] },
+    where: {
+      OR: [{ userId1: { in: testUserIds } }, { userId2: { in: testUserIds } }],
+    },
   });
   await prisma.refreshToken.deleteMany({
     where: { userId: { in: testUserIds } },
@@ -56,7 +67,9 @@ export async function cleanDatabase(app: INestApplication): Promise<void> {
   try {
     const messageModel = app.get(getModelToken(Message.name));
     if (testConversationIds.length > 0) {
-      await messageModel.deleteMany({ conversationId: { $in: testConversationIds } });
+      await messageModel.deleteMany({
+        conversationId: { $in: testConversationIds },
+      });
     }
   } catch {
     // Message model may not be available in all test suites

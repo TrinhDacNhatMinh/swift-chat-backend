@@ -258,7 +258,9 @@ describe('ChatService', () => {
     it('should throw WsException when user is not a participant in reactMessage()', async () => {
       conversations.isParticipant.mockResolvedValue(false);
 
-      await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
+      await expect(service.reactMessage('u1', dto)).rejects.toThrow(
+        WsException,
+      );
       expect(messages.toggleReaction).not.toHaveBeenCalled();
     });
 
@@ -266,12 +268,17 @@ describe('ChatService', () => {
       conversations.isParticipant.mockResolvedValue(true);
       messages.toggleReaction.mockResolvedValue(null);
 
-      await expect(service.reactMessage('u1', dto)).rejects.toThrow(WsException);
+      await expect(service.reactMessage('u1', dto)).rejects.toThrow(
+        WsException,
+      );
     });
 
     it('should return updated message when reactMessage() successfully adds reaction', async () => {
       conversations.isParticipant.mockResolvedValue(true);
-      const updated = { _id: 'msg1', reactions: [{ emoji: '👍', userId: 'u1' }] };
+      const updated = {
+        _id: 'msg1',
+        reactions: [{ emoji: '👍', userId: 'u1' }],
+      };
       messages.toggleReaction.mockResolvedValue(updated);
 
       const result = await service.reactMessage('u1', dto);

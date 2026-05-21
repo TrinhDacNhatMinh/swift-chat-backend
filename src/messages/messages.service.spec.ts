@@ -260,7 +260,10 @@ describe('MessagesService', () => {
     it('should ADD reaction via $push when emoji does not exist yet in toggleReaction()', async () => {
       // findOne returns null → reaction doesn't exist
       mockModel.model.findOne.mockResolvedValue(null);
-      const updated = { _id: MSG_ID, reactions: [{ emoji: '👍', userId: 'u1' }] };
+      const updated = {
+        _id: MSG_ID,
+        reactions: [{ emoji: '👍', userId: 'u1' }],
+      };
       mockModel.model.findOneAndUpdate.mockResolvedValue(updated);
 
       const result = await service.toggleReaction(MSG_ID, 'u1', '👍');

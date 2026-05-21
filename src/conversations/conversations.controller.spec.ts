@@ -33,7 +33,9 @@ describe('ConversationsController', () => {
 
   it('should be decorated with JwtAuthGuard when class is evaluated', () => {
     const guards = Reflect.getMetadata('__guards__', ConversationsController);
-    const hasJwtAuthGuard = guards.some((guard: any) => guard.name === 'JwtAuthGuard');
+    const hasJwtAuthGuard = guards.some(
+      (guard: any) => guard.name === 'JwtAuthGuard',
+    );
     expect(hasJwtAuthGuard).toBe(true);
   });
 
@@ -104,13 +106,22 @@ describe('ConversationsController', () => {
     const dto = { role: 'DEPUTY' as any };
     service.updateMemberRole.mockResolvedValue({ success: true });
     await controller.updateMemberRole({ id: 'u1' }, 'c1', 'u2', dto);
-    expect(service.updateMemberRole).toHaveBeenCalledWith('u1', 'c1', 'u2', dto.role);
+    expect(service.updateMemberRole).toHaveBeenCalledWith(
+      'u1',
+      'c1',
+      'u2',
+      dto.role,
+    );
   });
 
   it('should call service.transferLeadership when transferLeadership() is called', async () => {
     const dto = { newLeaderId: 'u2' };
     service.transferLeadership.mockResolvedValue({ success: true });
     await controller.transferLeadership({ id: 'u1' }, 'c1', dto);
-    expect(service.transferLeadership).toHaveBeenCalledWith('u1', 'c1', dto.newLeaderId);
+    expect(service.transferLeadership).toHaveBeenCalledWith(
+      'u1',
+      'c1',
+      dto.newLeaderId,
+    );
   });
 });

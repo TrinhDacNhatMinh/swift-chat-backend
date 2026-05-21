@@ -10,7 +10,7 @@ describe('MessagesController', () => {
   let conversationsService: Record<string, jest.Mock>;
 
   beforeEach(async () => {
-    messagesService = { 
+    messagesService = {
       findByConversation: jest.fn(),
       searchMessages: jest.fn(),
     };
@@ -30,7 +30,9 @@ describe('MessagesController', () => {
 
   it('should be decorated with JwtAuthGuard when class is evaluated', () => {
     const guards = Reflect.getMetadata('__guards__', MessagesController);
-    const hasJwtAuthGuard = guards.some((guard: any) => guard.name === 'JwtAuthGuard');
+    const hasJwtAuthGuard = guards.some(
+      (guard: any) => guard.name === 'JwtAuthGuard',
+    );
     expect(hasJwtAuthGuard).toBe(true);
   });
 
@@ -52,7 +54,10 @@ describe('MessagesController', () => {
         limit: 10,
       });
 
-      expect(conversationsService.isParticipant).toHaveBeenCalledWith('u1', 'c1');
+      expect(conversationsService.isParticipant).toHaveBeenCalledWith(
+        'u1',
+        'c1',
+      );
       expect(messagesService.findByConversation).toHaveBeenCalledWith(
         'c1',
         'cur',
@@ -81,7 +86,10 @@ describe('MessagesController', () => {
         limit: 10,
       });
 
-      expect(conversationsService.isParticipant).toHaveBeenCalledWith('u1', 'c1');
+      expect(conversationsService.isParticipant).toHaveBeenCalledWith(
+        'u1',
+        'c1',
+      );
       expect(messagesService.searchMessages).toHaveBeenCalledWith(
         'c1',
         'test',

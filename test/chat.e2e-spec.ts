@@ -31,7 +31,10 @@ describe('Chat WebSocket (e2e)', () => {
   }
 
   /** Helper: connect two sockets and join both into the test conversation. */
-  async function setupRoom(): Promise<{ senderSock: Socket; receiverSock: Socket }> {
+  async function setupRoom(): Promise<{
+    senderSock: Socket;
+    receiverSock: Socket;
+  }> {
     const senderSock = track(connectSocket(port, sender.accessToken));
     const receiverSock = track(connectSocket(port, receiver.accessToken));
 
@@ -45,7 +48,10 @@ describe('Chat WebSocket (e2e)', () => {
   }
 
   /** Helper: send a message from senderSock and return its messageId. */
-  async function seedMessage(senderSock: Socket, content: string): Promise<string> {
+  async function seedMessage(
+    senderSock: Socket,
+    content: string,
+  ): Promise<string> {
     const ack = await emitAck<any>(senderSock, 'chat:send_message', {
       conversationId,
       content,
@@ -116,7 +122,9 @@ describe('Chat WebSocket (e2e)', () => {
       const socket = track(connectSocket(port, sender.accessToken));
       await connectAndWait(socket);
 
-      const ack = await emitAck<any>(socket, 'chat:join_room', { conversationId });
+      const ack = await emitAck<any>(socket, 'chat:join_room', {
+        conversationId,
+      });
 
       expect(ack).toMatchObject({ status: 'success', conversationId });
     });
@@ -125,7 +133,9 @@ describe('Chat WebSocket (e2e)', () => {
       const socket = track(connectSocket(port, outsider.accessToken));
       await connectAndWait(socket);
 
-      const ack = await emitAck<any>(socket, 'chat:join_room', { conversationId });
+      const ack = await emitAck<any>(socket, 'chat:join_room', {
+        conversationId,
+      });
 
       expect(ack.status).toBe('error');
     });
@@ -138,7 +148,10 @@ describe('Chat WebSocket (e2e)', () => {
       const { senderSock, receiverSock } = await setupRoom();
 
       // Subscribe before sending so we do not miss the event
-      const incomingPromise = waitForEvent<any>(receiverSock, 'chat:receive_message');
+      const incomingPromise = waitForEvent<any>(
+        receiverSock,
+        'chat:receive_message',
+      );
 
       const ack = await emitAck<any>(senderSock, 'chat:send_message', {
         conversationId,
@@ -202,7 +215,10 @@ describe('Chat WebSocket (e2e)', () => {
       const { senderSock, receiverSock } = await setupRoom();
       const messageId = await seedMessage(senderSock, 'Original content');
 
-      const editedPromise = waitForEvent<any>(receiverSock, 'chat:message_edited');
+      const editedPromise = waitForEvent<any>(
+        receiverSock,
+        'chat:message_edited',
+      );
 
       const ack = await emitAck<any>(senderSock, 'chat:edit_message', {
         conversationId,
@@ -226,7 +242,10 @@ describe('Chat WebSocket (e2e)', () => {
       const { senderSock, receiverSock } = await setupRoom();
       const messageId = await seedMessage(senderSock, 'Message to be deleted');
 
-      const deletedPromise = waitForEvent<any>(receiverSock, 'chat:message_deleted');
+      const deletedPromise = waitForEvent<any>(
+        receiverSock,
+        'chat:message_deleted',
+      );
 
       const ack = await emitAck<any>(senderSock, 'chat:delete_message', {
         conversationId,
@@ -301,7 +320,10 @@ describe('Chat WebSocket (e2e)', () => {
       const { senderSock, receiverSock } = await setupRoom();
       const messageId = await seedMessage(senderSock, 'React to me!');
 
-      const reactionPromise = waitForEvent<any>(receiverSock, 'chat:reaction_updated');
+      const reactionPromise = waitForEvent<any>(
+        receiverSock,
+        'chat:reaction_updated',
+      );
 
       const ack = await emitAck<any>(senderSock, 'chat:react_message', {
         conversationId,
@@ -362,7 +384,10 @@ describe('Chat WebSocket (e2e)', () => {
     it('should broadcast chat:user_stop_typing to other room members', async () => {
       const { senderSock, receiverSock } = await setupRoom();
 
-      const stopTypingPromise = waitForEvent<any>(receiverSock, 'chat:user_stop_typing');
+      const stopTypingPromise = waitForEvent<any>(
+        receiverSock,
+        'chat:user_stop_typing',
+      );
 
       senderSock.emit('chat:stop_typing', { conversationId });
 

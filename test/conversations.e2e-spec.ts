@@ -196,7 +196,9 @@ describe('Conversations (e2e)', () => {
     describe('PATCH /api/v1/conversations/:id/members/:userId/role', () => {
       it('should allow leader to promote a member to deputy', async () => {
         await request(app.getHttpServer())
-          .patch(`/api/v1/conversations/${groupId}/members/${deputy.userId}/role`)
+          .patch(
+            `/api/v1/conversations/${groupId}/members/${deputy.userId}/role`,
+          )
           .set(authHeader(leader.accessToken))
           .send({ role: 'deputy' })
           .expect(200);
@@ -205,7 +207,9 @@ describe('Conversations (e2e)', () => {
       it('should return 403 when a deputy tries to change a role', async () => {
         // Only LEADER can change roles
         await request(app.getHttpServer())
-          .patch(`/api/v1/conversations/${groupId}/members/${outsider.userId}/role`)
+          .patch(
+            `/api/v1/conversations/${groupId}/members/${outsider.userId}/role`,
+          )
           .set(authHeader(deputy.accessToken))
           .send({ role: 'deputy' })
           .expect(403);
