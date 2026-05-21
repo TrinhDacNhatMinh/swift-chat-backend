@@ -35,6 +35,9 @@ export const envValidationSchema = Joi.object({
   FIREBASE_PROJECT_ID: optionalString,
   FIREBASE_CLIENT_EMAIL: Joi.string().email().optional().allow(''),
   FIREBASE_PRIVATE_KEY: optionalString,
+  CORS_ORIGIN: optionalString,
+  THROTTLE_TTL: Joi.number().default(60000),
+  THROTTLE_LIMIT: Joi.number().default(100),
 })
   .custom((value, helpers) => {
     const firebaseFields = [
