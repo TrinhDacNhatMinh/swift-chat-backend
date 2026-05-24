@@ -1,10 +1,12 @@
-import { Global, Module, OnModuleDestroy, Inject } from '@nestjs/common';
+import { Global, Module, OnModuleDestroy, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis, { RedisOptions } from 'ioredis';
 
 export const REDIS_CLIENT = 'REDIS_CLIENT';
 export const REDIS_PUB_CLIENT = 'REDIS_PUB_CLIENT';
 export const REDIS_SUB_CLIENT = 'REDIS_SUB_CLIENT';
+
+const logger = new Logger('RedisModule');
 
 const getRedisOptions = (configService: ConfigService): RedisOptions => {
   const password = configService.get<string>('REDIS_PASSWORD');
@@ -17,25 +19,30 @@ const getRedisOptions = (configService: ConfigService): RedisOptions => {
   };
 };
 
+const createRedisClient = (configService: ConfigService): Redis => {
+  const client = new Redis(getRedisOptions(configService));
+  client.on('error', (error) => {
+    logger.warn(`Redis client connection error: ${error.message}`);
+  });
+  return client;
+};
+
 @Global()
 @Module({
   providers: [
     {
       provide: REDIS_CLIENT,
-      useFactory: (configService: ConfigService) =>
-        new Redis(getRedisOptions(configService)),
+      useFactory: (configService: ConfigService) => createRedisClient(configService),
       inject: [ConfigService],
     },
     {
       provide: REDIS_PUB_CLIENT,
-      useFactory: (configService: ConfigService) =>
-        new Redis(getRedisOptions(configService)),
+      useFactory: (configService: ConfigService) => createRedisClient(configService),
       inject: [ConfigService],
     },
     {
       provide: REDIS_SUB_CLIENT,
-      useFactory: (configService: ConfigService) =>
-        new Redis(getRedisOptions(configService)),
+      useFactory: (configService: ConfigService) => createRedisClient(configService),
       inject: [ConfigService],
     },
   ],
