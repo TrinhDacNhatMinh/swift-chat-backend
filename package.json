@@ -19,7 +19,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "cross-env NODE_ENV=test jest --config ./test/jest-e2e.json --runInBand",
-    "test:e2e:prepare": "cross-env NODE_ENV=test prisma db push --accept-data-loss"
+    "test:e2e:prepare": "cross-env NODE_ENV=test prisma migrate deploy"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -31,6 +31,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.19",
     "@nestjs/swagger": "^11.4.3",
+    "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/websockets": "^11.1.19",
     "@prisma/adapter-pg": "^7.8.0",

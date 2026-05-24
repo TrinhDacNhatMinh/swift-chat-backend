@@ -11,4 +11,5 @@ export const createMockRedis = () => ({
   incr: jest.fn(),
   decr: jest.fn(),
   expire: jest.fn(),
+  eval: jest.fn(),
 });

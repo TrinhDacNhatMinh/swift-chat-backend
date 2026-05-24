@@ -127,13 +127,16 @@ describe('ChatGateway', () => {
   describe('handleDisconnect()', () => {
     it('should cleanup presence, broadcast offline, and update lastSeen when last connection disconnects', async () => {
       const client = createMockSocket();
-      redis.decr.mockResolvedValue(0); // last connection gone
+      redis.eval.mockResolvedValue(0); // last connection gone
 
       await gateway.handleDisconnect(client as any);
 
-      expect(redis.decr).toHaveBeenCalledWith('conn_count:u1');
-      expect(redis.del).toHaveBeenCalledWith('conn_count:u1');
-      expect(redis.del).toHaveBeenCalledWith('presence:u1');
+      expect(redis.eval).toHaveBeenCalledWith(
+        expect.any(String),
+        2,
+        'conn_count:u1',
+        'presence:u1',
+      );
       expect(chatService.broadcastPresenceToFriends).toHaveBeenCalledWith(
         'u1',
         'offline',
@@ -143,11 +146,11 @@ describe('ChatGateway', () => {
 
     it('should only decrement count when other connections remain in handleDisconnect()', async () => {
       const client = createMockSocket();
-      redis.decr.mockResolvedValue(1); // still has connections
+      redis.eval.mockResolvedValue(1); // still has connections
 
       await gateway.handleDisconnect(client as any);
 
-      expect(redis.del).not.toHaveBeenCalled();
+      expect(redis.eval).toHaveBeenCalled();
       expect(chatService.broadcastPresenceToFriends).not.toHaveBeenCalled();
       expect(userService.updateLastSeen).not.toHaveBeenCalled();
     });
@@ -157,12 +160,12 @@ describe('ChatGateway', () => {
 
       await gateway.handleDisconnect(client as any);
 
-      expect(redis.decr).not.toHaveBeenCalled();
+      expect(redis.eval).not.toHaveBeenCalled();
     });
 
     it('should not throw when updateLastSeen fails in handleDisconnect()', async () => {
       const client = createMockSocket();
-      redis.decr.mockResolvedValue(0);
+      redis.eval.mockResolvedValue(0);
       userService.updateLastSeen.mockRejectedValue(new Error('db error'));
 
       await expect(
@@ -208,13 +211,13 @@ describe('ChatGateway', () => {
   // Event: chat:typing / chat:stop_typing
   // =========================================================================
   describe('handleTyping()', () => {
-    it('should emit typing event to conversation room when handleTyping() is called', async () => {
+    it('should emit typing event to conversation room when handleTyping() is called', () => {
       const mockEmit = jest.fn();
       const client = createMockSocket({
         to: jest.fn().mockReturnValue({ emit: mockEmit }),
       });
 
-      await gateway.handleTyping({ conversationId: 'c1' }, client as any);
+      gateway.handleTyping({ conversationId: 'c1' }, client as any);
 
       expect(client.to).toHaveBeenCalledWith('conversation:c1');
       expect(mockEmit).toHaveBeenCalledWith(
@@ -228,13 +231,13 @@ describe('ChatGateway', () => {
   });
 
   describe('handleStopTyping()', () => {
-    it('should emit stop_typing event to conversation room when handleStopTyping() is called', async () => {
+    it('should emit stop_typing event to conversation room when handleStopTyping() is called', () => {
       const mockEmit = jest.fn();
       const client = createMockSocket({
         to: jest.fn().mockReturnValue({ emit: mockEmit }),
       });
 
-      await gateway.handleStopTyping({ conversationId: 'c1' }, client as any);
+      gateway.handleStopTyping({ conversationId: 'c1' }, client as any);
 
       expect(mockEmit).toHaveBeenCalledWith(
         'chat:user_stop_typing',

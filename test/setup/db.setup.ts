@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { Model } from 'mongoose';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Message } from '../../src/messages/schemas/message.schema';
@@ -65,7 +66,7 @@ export async function cleanDatabase(app: INestApplication): Promise<void> {
 
   // MongoDB messages
   try {
-    const messageModel = app.get(getModelToken(Message.name));
+    const messageModel = app.get<Model<Message>>(getModelToken(Message.name));
     if (testConversationIds.length > 0) {
       await messageModel.deleteMany({
         conversationId: { $in: testConversationIds },

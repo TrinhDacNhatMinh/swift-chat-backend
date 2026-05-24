@@ -56,7 +56,7 @@ export class FcmService {
   async removeDevice(token: string) {
     try {
       await this.prisma.deviceToken.delete({ where: { token } });
-    } catch (error) {
+    } catch {
       // Ignore if not exists
     }
   }
@@ -94,7 +94,7 @@ export class FcmService {
             res.error.code === 'messaging/invalid-registration-token' ||
             res.error.code === 'messaging/registration-token-not-registered'
           ) {
-            this.removeDevice(tokens[idx]);
+            void this.removeDevice(tokens[idx]);
           }
         }
       });

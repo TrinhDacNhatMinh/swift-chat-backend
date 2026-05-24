@@ -42,7 +42,9 @@ const PRESENCE_TTL_SECONDS = 120;
 @WebSocketGateway({
   namespace: '/chat',
   cors: {
-    origin: '*',
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+      : /^https?:\/\/localhost(:\d+)?$/,
     credentials: true,
   },
 })
@@ -70,31 +72,35 @@ export class ChatGateway
     this.logger.log('ChatGateway initialized');
     this.chatService.setServer(server);
 
-    server.use(async (socket: Socket, next) => {
-      const token = this.extractToken(socket);
+    server.use((socket: Socket, next) => {
+      const runAuth = async () => {
+        const token = this.extractToken(socket);
 
-      if (!token) {
-        return next(new Error('Authentication token is required'));
-      }
-
-      try {
-        const payload = this.jwtService.verify<JwtPayload>(token, {
-          secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
-        });
-        socket.data.userId = payload.sub;
-        socket.data.email = payload.email;
-
-        try {
-          const user = await this.userService.findById(payload.sub);
-          socket.data.username = user.username;
-        } catch {
-          socket.data.username = payload.email;
+        if (!token) {
+          return next(new Error('Authentication token is required'));
         }
 
-        next();
-      } catch {
-        next(new Error('Invalid or expired authentication token'));
-      }
+        try {
+          const payload = this.jwtService.verify<JwtPayload>(token, {
+            secret: this.configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
+          });
+          socket.data.userId = payload.sub;
+          socket.data.email = payload.email;
+
+          try {
+            const user = await this.userService.findById(payload.sub);
+            socket.data.username = user.username;
+          } catch {
+            socket.data.username = payload.email;
+          }
+
+          next();
+        } catch {
+          next(new Error('Invalid or expired authentication token'));
+        }
+      };
+
+      void runAuth();
     });
   }
 
@@ -131,11 +137,26 @@ export class ChatGateway
     if (!userId) return;
 
     const countKey = `${REDIS_CONNECTION_COUNT_PREFIX}${userId}`;
-    const remainingCount = await this.redisClient.decr(countKey);
+    const presenceKey = `${REDIS_PRESENCE_PREFIX}${userId}`;
+
+    const luaScript = `
+      local count = redis.call('DECR', KEYS[1])
+      if count <= 0 then
+        redis.call('DEL', KEYS[1])
+        redis.call('DEL', KEYS[2])
+        return 0
+      end
+      return count
+    `;
+
+    const remainingCount = (await this.redisClient.eval(
+      luaScript,
+      2,
+      countKey,
+      presenceKey,
+    )) as number;
 
     if (remainingCount <= 0) {
-      await this.redisClient.del(countKey);
-      await this.redisClient.del(`${REDIS_PRESENCE_PREFIX}${userId}`);
       await this.chatService.broadcastPresenceToFriends(userId, 'offline');
 
       try {
@@ -159,6 +180,19 @@ export class ChatGateway
     return { status: 'success', conversationId: dto.conversationId };
   }
 
+  @SubscribeMessage('chat:rejoin_rooms')
+  async handleRejoinRooms(@ConnectedSocket() client: Socket) {
+    const userId = client.data.userId as string;
+    const { data: conversations } =
+      await this.chatService.getUserConversations(userId);
+
+    for (const conv of conversations) {
+      await client.join(`conversation:${conv.id}`);
+    }
+
+    return { status: 'ok', rejoined: conversations.length };
+  }
+
   @SubscribeMessage('chat:leave_room')
   async handleLeaveRoom(
     @MessageBody() dto: RoomEventDto,
@@ -169,7 +203,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('chat:typing')
-  async handleTyping(
+  handleTyping(
     @MessageBody() dto: RoomEventDto,
     @ConnectedSocket() client: Socket,
   ) {
@@ -181,7 +215,7 @@ export class ChatGateway
   }
 
   @SubscribeMessage('chat:stop_typing')
-  async handleStopTyping(
+  handleStopTyping(
     @MessageBody() dto: RoomEventDto,
     @ConnectedSocket() client: Socket,
   ) {

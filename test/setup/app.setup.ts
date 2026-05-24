@@ -51,7 +51,7 @@ export async function closeTestApp(): Promise<void> {
 }
 
 /** Returns the live HTTP server (for supertest). */
-export function getTestHttpServer() {
+export function getTestHttpServer(): any {
   return app!.getHttpServer();
 }
 

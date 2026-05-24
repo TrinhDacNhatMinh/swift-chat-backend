@@ -134,7 +134,7 @@ describe('ConversationsService', () => {
       prisma.participant.createMany.mockResolvedValue({ count: 2 });
       prisma.conversation.findUnique.mockResolvedValue(newConv);
 
-      const result = await service.createConversation('u1', {
+      await service.createConversation('u1', {
         type: ConversationType.DIRECT,
         partnerId: 'u2',
       });

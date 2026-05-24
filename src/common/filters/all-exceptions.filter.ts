@@ -49,10 +49,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = exception.message;
     }
 
-    this.logger.error(
-      `[${request.method}] ${request.url} - Status: ${status} - Error: ${message}`,
-      exception instanceof Error ? exception.stack : '',
-    );
+    if (request.url !== '/favicon.ico') {
+      if (status >= 500) {
+        this.logger.error(
+          `[${request.method}] ${request.url} - Status: ${status} - Error: ${message}`,
+          exception instanceof Error ? exception.stack : '',
+        );
+      } else {
+        this.logger.warn(
+          `[${request.method}] ${request.url} - Status: ${status} - Error: ${message}`,
+        );
+      }
+    }
 
     response.status(status).json({
       statusCode: status,

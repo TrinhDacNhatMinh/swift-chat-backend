@@ -62,9 +62,9 @@ export class NotificationsService {
         },
         data: { isRead: true },
       });
-    } catch (error: any) {
+    } catch (error) {
       // P2025: record not found — either ID doesn't exist or userId doesn't match
-      if (error?.code === 'P2025') {
+      if ((error as { code?: string })?.code === 'P2025') {
         throw new NotFoundException('Notification not found');
       }
       throw error;

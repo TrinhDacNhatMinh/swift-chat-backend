@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client, LoginTicket } from 'google-auth-library';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user/user.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -85,7 +85,7 @@ export class AuthService {
       payload = this.jwtService.verify(refreshToken, {
         secret: this.configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       });
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
@@ -108,13 +108,13 @@ export class AuthService {
   }
 
   async googleLogin(googleAuthDto: GoogleAuthDto) {
-    let ticket;
+    let ticket: LoginTicket;
     try {
       ticket = await this.googleClient.verifyIdToken({
         idToken: googleAuthDto.idToken,
         audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
       });
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('Invalid Google token');
     }
 
@@ -123,7 +123,7 @@ export class AuthService {
       throw new BadRequestException('Invalid Google payload');
     }
 
-    const { email, sub: providerId, name, picture } = payload;
+    const { email, sub: providerId, picture } = payload;
 
     // Check if user already exists
     let user = await this.userService.findByEmail(email);
@@ -211,6 +211,9 @@ export class AuthService {
     // Parse expiration string to Date object for DB
     // A simple approach: verify the token we just created to get the exp timestamp
     const decoded = this.jwtService.decode(refreshToken);
+    if (!decoded || typeof decoded.exp !== 'number') {
+      throw new Error('Failed to decode refresh token expiration');
+    }
     const expiresAt = new Date(decoded.exp * 1000);
 
     // Save refresh token to DB

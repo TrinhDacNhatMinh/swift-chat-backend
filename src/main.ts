@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { ThrottlerGuard } from '@nestjs/throttler';
 import helmet from 'helmet';
+import Redis from 'ioredis';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { RedisIoAdapter } from './redis/redis.adapter';
@@ -11,6 +11,7 @@ import { REDIS_PUB_CLIENT, REDIS_SUB_CLIENT } from './redis/redis.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   const configService = app.get(ConfigService);
   const nodeEnv = configService.get<string>('NODE_ENV', 'development');
@@ -19,11 +20,7 @@ async function bootstrap() {
   // ─── Helmet ────────────────────────────────────────────────────────────────
   // In production: full defaults (strict CSP etc.)
   // In development/test: disable CSP so Swagger UI (inline scripts) still works
-  app.use(
-    isProd
-      ? helmet()
-      : helmet({ contentSecurityPolicy: false }),
-  );
+  app.use(isProd ? helmet() : helmet({ contentSecurityPolicy: false }));
 
   // ─── CORS ──────────────────────────────────────────────────────────────────
   // CORS_ORIGIN (comma-separated) → explicit allow-list
@@ -43,7 +40,9 @@ async function bootstrap() {
   app.enableCors({ origin: corsOrigin, credentials: true });
 
   // ─── Global prefix & pipes ─────────────────────────────────────────────────
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'health/(.*)', method: RequestMethod.GET }],
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -51,11 +50,6 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new AllExceptionsFilter());
-
-  // ─── Rate Limit ────────────────────────────────────────────────────────────
-  // ThrottlerModule is registered in AppModule; here we apply it globally.
-  // Use @SkipThrottle() on any controller/handler that should be exempt.
-  app.useGlobalGuards(app.get(ThrottlerGuard));
 
   // ─── Swagger (non-production only) ─────────────────────────────────────────
   if (!isProd) {
@@ -70,11 +64,11 @@ async function bootstrap() {
   }
 
   // ─── WebSocket (Redis adapter) ─────────────────────────────────────────────
-  const pubClient = app.get(REDIS_PUB_CLIENT);
-  const subClient = app.get(REDIS_SUB_CLIENT);
+  const pubClient = app.get<Redis>(REDIS_PUB_CLIENT);
+  const subClient = app.get<Redis>(REDIS_SUB_CLIENT);
   app.useWebSocketAdapter(new RedisIoAdapter(app, pubClient, subClient));
 
   const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);
 }
-bootstrap();
+void bootstrap();

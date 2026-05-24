@@ -1,7 +1,5 @@
 import { WsJwtGuard } from './ws-jwt.guard';
 import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { WsException } from '@nestjs/websockets';
 import { ExecutionContext } from '@nestjs/common';
 
