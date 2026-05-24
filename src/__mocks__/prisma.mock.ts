@@ -6,8 +6,20 @@
  * The `$transaction` mock executes the callback with a reference to *itself*
  * so that `tx.friendRequest.update(...)` etc. hit the same jest.fn() stubs.
  */
-export const createMockPrismaService = () => {
-  const mock: Record<string, any> = {
+export interface MockPrismaService {
+  user: Record<string, jest.Mock>;
+  friend: Record<string, jest.Mock>;
+  friendRequest: Record<string, jest.Mock>;
+  conversation: Record<string, jest.Mock>;
+  participant: Record<string, jest.Mock>;
+  notification: Record<string, jest.Mock>;
+  refreshToken: Record<string, jest.Mock>;
+  deviceToken: Record<string, jest.Mock>;
+  $transaction: jest.Mock;
+}
+
+export const createMockPrismaService = (): MockPrismaService => {
+  const mock: MockPrismaService = {
     user: {
       findUnique: jest.fn(),
       findFirst: jest.fn(),
@@ -70,7 +82,9 @@ export const createMockPrismaService = () => {
 
   // By default, $transaction executes the callback with `mock` itself as the
   // transactional client, so callers can assert on the same jest.fn() stubs.
-  mock.$transaction.mockImplementation((fn: (tx: any) => any) => fn(mock));
+  mock.$transaction.mockImplementation(
+    (fn: (tx: MockPrismaService) => unknown) => fn(mock),
+  );
 
   return mock;
 };

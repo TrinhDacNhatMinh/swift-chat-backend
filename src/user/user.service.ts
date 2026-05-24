@@ -110,7 +110,15 @@ export class UserService {
   async getUserProfile(id: string) {
     // Cache-aside: return cached value if available
     const cached = await this.redis.get(USER_PROFILE_CACHE_KEY(id));
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+      return JSON.parse(cached) as {
+        id: string;
+        username: string;
+        avatarUrl: string | null;
+        createdAt: string | Date;
+        lastSeen: string | Date | null;
+      };
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id },
