@@ -22,19 +22,19 @@ export class UserService {
     providerId?: string;
     avatarUrl?: string;
   }) {
-    return this.prisma.user.create({
+    return await this.prisma.user.create({
       data,
     });
   }
 
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { email },
     });
   }
 
   async findByUsername(username: string) {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: { username },
     });
   }
@@ -50,7 +50,7 @@ export class UserService {
   }
 
   async findByProvider(authProvider: string, providerId: string) {
-    return this.prisma.user.findUnique({
+    return await this.prisma.user.findUnique({
       where: {
         authProvider_providerId: {
           authProvider,
@@ -80,7 +80,7 @@ export class UserService {
   }
 
   async searchUsers(query: string, currentUserId: string) {
-    return this.prisma.user.findMany({
+    return await this.prisma.user.findMany({
       where: {
         id: { not: currentUserId },
         OR: [

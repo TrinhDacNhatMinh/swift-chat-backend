@@ -95,7 +95,7 @@ export class FriendsService {
   }
 
   async getPendingRequests(userId: string) {
-    return this.prisma.friendRequest.findMany({
+    return await this.prisma.friendRequest.findMany({
       where: {
         receiverId: userId,
         status: FriendRequestStatus.PENDING,

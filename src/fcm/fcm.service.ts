@@ -46,7 +46,7 @@ export class FcmService {
   }
 
   async registerDevice(userId: string, token: string, platform: string) {
-    return this.prisma.deviceToken.upsert({
+    return await this.prisma.deviceToken.upsert({
       where: { token },
       update: { userId, platform },
       create: { userId, token, platform },

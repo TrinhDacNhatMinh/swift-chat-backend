@@ -30,7 +30,7 @@ export class ConversationsService {
           'You cannot create a conversation with yourself',
         );
       }
-      return this.createOrGetDirectConversation(creatorId, dto.partnerId);
+      return await this.createOrGetDirectConversation(creatorId, dto.partnerId);
     }
 
     if (dto.type === ConversationType.GROUP) {
@@ -39,7 +39,7 @@ export class ConversationsService {
           'memberIds array is required for group chat',
         );
       }
-      return this.createGroupConversation(creatorId, dto.memberIds, dto.title);
+      return await this.createGroupConversation(creatorId, dto.memberIds, dto.title);
     }
   }
 
@@ -131,7 +131,7 @@ export class ConversationsService {
       (id) => id !== creatorId,
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    return await this.prisma.$transaction(async (tx) => {
       const conversation = await tx.conversation.create({
         data: {
           type: ConversationType.GROUP,
@@ -616,7 +616,7 @@ export class ConversationsService {
   }
 
   async markAsRead(userId: string, conversationId: string, messageId: string) {
-    return this.prisma.participant.update({
+    return await this.prisma.participant.update({
       where: {
         conversationId_userId: { conversationId, userId },
       },
@@ -625,7 +625,7 @@ export class ConversationsService {
   }
 
   async getReadReceipts(conversationId: string) {
-    return this.prisma.participant.findMany({
+    return await this.prisma.participant.findMany({
       where: { conversationId },
       select: {
         userId: true,
