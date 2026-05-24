@@ -1,4 +1,10 @@
-import { Global, Module, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Global,
+  Module,
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import mongoose, { Connection } from 'mongoose';
@@ -39,7 +45,7 @@ const logger = new Logger('DatabaseModule');
     }),
   ],
 })
-export class DatabaseModule implements OnModuleInit {
+export class DatabaseModule implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     const connState = mongoose.connection.readyState;
     const stateMap: Record<number, string> = {
@@ -49,5 +55,10 @@ export class DatabaseModule implements OnModuleInit {
       3: 'disconnecting',
     };
     logger.log(`MongoDB connection state: ${stateMap[connState] || 'unknown'}`);
+  }
+
+  async onModuleDestroy() {
+    await mongoose.disconnect();
+    logger.log('MongoDB disconnected gracefully');
   }
 }
