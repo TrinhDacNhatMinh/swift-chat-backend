@@ -62,7 +62,7 @@ export class MessagesService {
       query._id = { $lt: new Types.ObjectId(cursor) };
     }
 
-    return this.messageModel.find(query).sort({ _id: -1 }).limit(limit).exec();
+    return await this.messageModel.find(query).sort({ _id: -1 }).limit(limit).exec();
   }
 
   async searchMessages(
@@ -81,7 +81,7 @@ export class MessagesService {
       query._id = { $lt: new Types.ObjectId(cursor) };
     }
 
-    return this.messageModel
+    return await this.messageModel
       .find(query, { score: { $meta: 'textScore' } })
       .sort({ score: { $meta: 'textScore' }, _id: -1 })
       .limit(limit)
@@ -92,7 +92,7 @@ export class MessagesService {
     messageId: string,
     senderId: string,
   ): Promise<MessageDocument | null> {
-    return this.messageModel.findOneAndUpdate(
+    return await this.messageModel.findOneAndUpdate(
       { _id: new Types.ObjectId(messageId), sender_id: senderId },
       { is_deleted: true, deleted_at: new Date() }, // Preserve content for audit trail
       { new: true },
@@ -104,7 +104,7 @@ export class MessagesService {
     senderId: string,
     newContent: string,
   ): Promise<MessageDocument | null> {
-    return this.messageModel.findOneAndUpdate(
+    return await this.messageModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(messageId),
         sender_id: senderId,

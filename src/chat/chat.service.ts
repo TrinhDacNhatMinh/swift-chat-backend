@@ -188,6 +188,6 @@ export class ChatService {
   }
 
   async getUserConversations(userId: string) {
-    return this.conversationsService.getUserConversations(userId, 200, 0);
+    return await this.conversationsService.getUserConversations(userId, 200, 0);
   }
 }

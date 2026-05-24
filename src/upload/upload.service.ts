@@ -23,7 +23,7 @@ export class UploadService {
         'File upload is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
       );
     }
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
         {
           folder: 'swift-chat',
