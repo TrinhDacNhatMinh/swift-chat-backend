@@ -39,6 +39,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
+        env:
+          POSTGRESQL: postgresql://localhost:5432/mock
         run: pnpm exec prisma generate
 
       - name: Lint
@@ -120,6 +122,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
+        env:
+          POSTGRESQL: postgresql://root:rootpassword@localhost:5432/swift_chat_test?schema=public
         run: pnpm exec prisma generate
 
       - name: Prepare Test Database
