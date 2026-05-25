@@ -1,4 +1,10 @@
-import { Global, Module, OnModuleDestroy, Inject, Logger } from '@nestjs/common';
+import {
+  Global,
+  Module,
+  OnModuleDestroy,
+  Inject,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis, { RedisOptions } from 'ioredis';
 
@@ -32,17 +38,20 @@ const createRedisClient = (configService: ConfigService): Redis => {
   providers: [
     {
       provide: REDIS_CLIENT,
-      useFactory: (configService: ConfigService) => createRedisClient(configService),
+      useFactory: (configService: ConfigService) =>
+        createRedisClient(configService),
       inject: [ConfigService],
     },
     {
       provide: REDIS_PUB_CLIENT,
-      useFactory: (configService: ConfigService) => createRedisClient(configService),
+      useFactory: (configService: ConfigService) =>
+        createRedisClient(configService),
       inject: [ConfigService],
     },
     {
       provide: REDIS_SUB_CLIENT,
-      useFactory: (configService: ConfigService) => createRedisClient(configService),
+      useFactory: (configService: ConfigService) =>
+        createRedisClient(configService),
       inject: [ConfigService],
     },
   ],
