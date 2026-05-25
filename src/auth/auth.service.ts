@@ -137,28 +137,43 @@ export class AuthService {
         );
       }
     } else {
-      // Create new user
-      // Generate a base username from email or name
+      // Create new user with a unique username derived from the email
       const baseUsername = email
         .split('@')[0]
         .replace(/[^a-zA-Z0-9]/g, '')
         .toLowerCase();
 
-      // Ensure unique username
+      // Retry loop: handles concurrent requests that might claim the same username
+      const MAX_RETRIES = 5;
       let username = baseUsername;
-      let counter = 1;
-      while (await this.userService.findByUsername(username)) {
-        username = `${baseUsername}${counter}`;
-        counter++;
+      let attempt = 0;
+
+      while (attempt < MAX_RETRIES) {
+        try {
+          user = await this.userService.create({
+            email,
+            username,
+            authProvider: 'google',
+            providerId,
+            avatarUrl: picture,
+          });
+          break; // success — exit loop
+        } catch (error: any) {
+          // P2002 = unique constraint violation (username taken)
+          if (error?.code === 'P2002') {
+            attempt++;
+            username = `${baseUsername}${attempt}`;
+          } else {
+            throw error;
+          }
+        }
       }
 
-      user = await this.userService.create({
-        email,
-        username,
-        authProvider: 'google',
-        providerId,
-        avatarUrl: picture,
-      });
+      if (!user) {
+        throw new BadRequestException(
+          'Unable to generate a unique username. Please try again.',
+        );
+      }
     }
 
     return this.generateTokenPair(user.id, user.email);

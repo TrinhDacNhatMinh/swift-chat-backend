@@ -340,6 +340,83 @@ describe('AuthService', () => {
       );
       expect(result).toHaveProperty('accessToken');
     });
+
+    it('should retry user creation with suffix when unique constraint violation (P2002) is encountered', async () => {
+      (service as any).googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({
+          email: 'race@test.com',
+          sub: 'google-111',
+          name: 'Race Condition',
+          picture: 'http://race.jpg',
+        }),
+      });
+      userService.findByEmail.mockResolvedValue(null);
+
+      // First attempt: P2002 error
+      // Second attempt: P2002 error
+      // Third attempt: success
+      const errorP2002 = new Error('Unique constraint failed') as any;
+      errorP2002.code = 'P2002';
+
+      const createdUser = mockUser({
+        id: 'race-google-id',
+        email: 'race@test.com',
+        username: 'race2',
+      });
+
+      userService.create
+        .mockRejectedValueOnce(errorP2002)
+        .mockRejectedValueOnce(errorP2002)
+        .mockResolvedValueOnce(createdUser);
+      prisma.refreshToken.create.mockResolvedValue({});
+
+      const result = await service.googleLogin(dto);
+
+      expect(userService.create).toHaveBeenCalledTimes(3);
+      expect(userService.create).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ username: 'race' }),
+      );
+      expect(userService.create).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ username: 'race1' }),
+      );
+      expect(userService.create).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({ username: 'race2' }),
+      );
+      expect(result).toHaveProperty('accessToken');
+    });
+
+    it('should throw BadRequestException when maximum user creation retries are exceeded', async () => {
+      (service as any).googleClient.verifyIdToken.mockResolvedValue({
+        getPayload: () => ({
+          email: 'fail@test.com',
+          sub: 'google-999',
+          name: 'Failed User',
+          picture: 'http://fail.jpg',
+        }),
+      });
+      userService.findByEmail.mockResolvedValue(null);
+
+      const errorP2002 = new Error('Unique constraint failed') as any;
+      errorP2002.code = 'P2002';
+
+      userService.create.mockRejectedValue(errorP2002);
+
+      let caughtError: any;
+      try {
+        await service.googleLogin(dto);
+      } catch (err) {
+        caughtError = err;
+      }
+
+      expect(caughtError).toBeInstanceOf(BadRequestException);
+      expect(caughtError.message).toBe(
+        'Unable to generate a unique username. Please try again.',
+      );
+      expect(userService.create).toHaveBeenCalledTimes(5);
+    });
   });
 
   // =========================================================================
