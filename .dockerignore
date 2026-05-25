@@ -1,0 +1,39 @@
+# Dependencies & build artifacts
+node_modules
+dist
+build
+coverage
+.nyc_output
+
+# Git & CI
+.git
+.github
+
+# Local environment files — NEVER include secrets in Docker image
+.env
+.env.*
+!.env.example
+
+# Firebase credential file
+serviceAccount.json
+
+# IDE and OS files
+.vscode
+.idea
+*.DS_Store
+
+# Logs
+logs
+*.log
+
+# Documentation
+docs
+README.md
+
+# Prisma dev tooling (only schema + migrations are needed)
+prisma/dev.db
+prisma/dev.db-journal
+
+# Temp files
+.temp
+.tmp
