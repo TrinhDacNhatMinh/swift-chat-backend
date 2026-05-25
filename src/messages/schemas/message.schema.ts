@@ -73,3 +73,11 @@ export const MessageSchema = SchemaFactory.createForClass(Message);
 
 // Add text index for searching messages
 MessageSchema.index({ conversation_id: 1, content: 'text' });
+
+@Schema({ collection: 'messages_archive', timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } })
+export class MessageArchive extends Message {}
+
+export const MessageArchiveSchema = SchemaFactory.createForClass(MessageArchive);
+
+// Text index for archive collection
+MessageArchiveSchema.index({ conversation_id: 1, content: 'text' });

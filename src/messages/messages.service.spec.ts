@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { MessagesService } from './messages.service';
-import { Message, MessageType } from './schemas/message.schema';
+import { Message, MessageArchive, MessageType } from './schemas/message.schema';
+import { ConfigService } from '@nestjs/config';
 
 // ---------------------------------------------------------------------------
 // Mock Mongoose Model
@@ -39,14 +40,22 @@ const createMockModel = () => {
 describe('MessagesService', () => {
   let service: MessagesService;
   let mockModel: ReturnType<typeof createMockModel>;
+  let mockArchiveModel: ReturnType<typeof createMockModel>;
+  let mockConfigService: any;
 
   beforeEach(async () => {
     mockModel = createMockModel();
+    mockArchiveModel = createMockModel();
+    mockConfigService = {
+      get: jest.fn().mockReturnValue(30),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MessagesService,
         { provide: getModelToken(Message.name), useValue: mockModel.model },
+        { provide: getModelToken(MessageArchive.name), useValue: mockArchiveModel.model },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -103,7 +112,7 @@ describe('MessagesService', () => {
     });
 
     it('should add $lt filter when findByConversation() is called with cursor', async () => {
-      await service.findByConversation('c1', '507f1f77bcf86cd799439011');
+      await service.findByConversation('c1', '7f000000bcf86cd799439011');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
       expect(findCall._id).toBeDefined();
@@ -325,7 +334,7 @@ describe('MessagesService', () => {
     });
 
     it('should add $lt cursor filter when searchMessages() is called with cursor', async () => {
-      await service.searchMessages('c1', 'hello', '507f1f77bcf86cd799439011');
+      await service.searchMessages('c1', 'hello', '7f000000bcf86cd799439011');
 
       const findCall = mockModel.model.find.mock.calls[0][0];
       expect(findCall._id).toBeDefined();
