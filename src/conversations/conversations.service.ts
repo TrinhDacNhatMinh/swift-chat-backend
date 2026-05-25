@@ -39,7 +39,11 @@ export class ConversationsService {
           'memberIds array is required for group chat',
         );
       }
-      return await this.createGroupConversation(creatorId, dto.memberIds, dto.title);
+      return await this.createGroupConversation(
+        creatorId,
+        dto.memberIds,
+        dto.title,
+      );
     }
   }
 

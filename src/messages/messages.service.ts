@@ -62,7 +62,11 @@ export class MessagesService {
       query._id = { $lt: new Types.ObjectId(cursor) };
     }
 
-    return await this.messageModel.find(query).sort({ _id: -1 }).limit(limit).exec();
+    return await this.messageModel
+      .find(query)
+      .sort({ _id: -1 })
+      .limit(limit)
+      .exec();
   }
 
   async searchMessages(
