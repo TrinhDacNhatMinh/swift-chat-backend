@@ -1,8 +1,10 @@
 name: CD — Build & Deploy
 
 on:
-  push:
-    branches: ["main"]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
 
@@ -14,6 +16,7 @@ jobs:
   # ─── Job 1: Build & Push Docker Image ────────────────────────────────────────
   build-and-push:
     name: Build & Push Docker Image
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,8 +64,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
 
-  # ─── Job 2: Deploy ────────────────────────────────────────────────────────────
-  # Choose ONE of the deploy strategies below and delete the others.
+  # ─── Job 2: Deploy to Railway ─────────────────────────────────────────────────
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -73,62 +75,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ── Option A: Deploy via SSH to a VPS (self-hosted) ─────────────────────
-      # Required secrets: SSH_HOST, SSH_USER, SSH_PRIVATE_KEY
-      # The server must have Docker + Docker Compose installed.
-      #
-      # - name: Deploy via SSH
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: ${{ secrets.SSH_HOST }}
-      #     username: ${{ secrets.SSH_USER }}
-      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     script: |
-      #       docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-      #       docker stop swift-chat-backend || true
-      #       docker rm swift-chat-backend || true
-      #       docker run -d \
-      #         --name swift-chat-backend \
-      #         --env-file /opt/swift-chat/.env.production \
-      #         -p 3000:3000 \
-      #         --restart unless-stopped \
-      #         ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-
-      # ── Option B: Deploy to Render (via deploy hook) ─────────────────────────
-      # Required secrets: RENDER_DEPLOY_HOOK_URL
-      #
-      # - name: Trigger Render Deploy Hook
-      #   run: |
-      #     curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
-
-      # ── Option C: Deploy to Railway ───────────────────────────────────────────
-      # Required secrets: RAILWAY_TOKEN
-      #
-      # - name: Install Railway CLI
-      #   run: npm install -g @railway/cli
-      # - name: Deploy to Railway
-      #   env:
-      #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      #   run: railway up --detach
-
-      # ── Option D: Rollout on Kubernetes ──────────────────────────────────────
-      # Required secrets: KUBECONFIG
-      #
-      # - name: Set up kubectl
-      #   uses: azure/setup-kubectl@v4
-      # - name: Deploy to Kubernetes
-      #   env:
-      #     KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      #   run: |
-      #     kubectl set image deployment/swift-chat-backend \
-      #       app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build-and-push.outputs.image-digest }}
-      #     kubectl rollout status deployment/swift-chat-backend
-
-      # ── Placeholder (remove when a real strategy is chosen above) ────────────
-      - name: ⚠️ No deploy strategy configured
+      - name: Deploy to Railway
         run: |
-          echo "Image built and pushed successfully:"
-          echo "  ${{ needs.build-and-push.outputs.image-tag }}"
-          echo ""
-          echo "Uncomment one of the deploy strategies in this file to complete the CD pipeline."
-          echo "See comments in deploy.yml for options: SSH/VPS, Render, Railway, or Kubernetes."
+          curl -X POST \
+            "https://backboard.railway.app/graphql/v2" \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "query": "mutation { serviceInstanceRedeploy(serviceId: \"752778e6-6a17-42e7-8ea5-dba975c1ae24\") }"
+            }'
