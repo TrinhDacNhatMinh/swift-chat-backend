@@ -10,7 +10,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # github.repository may contain uppercase letters (e.g. TrinhDacNhatMinh/...).
+  # Docker registry requires fully lowercase names — resolved in a dedicated step below.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ─── Job 1: Build & Push Docker Image ────────────────────────────────────────
@@ -29,6 +31,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Convert repository name to lowercase — Docker registry requirement.
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -60,9 +66,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Cache layers across runs for faster builds
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+          # Use GitHub Actions cache — no separate registry tag needed, avoids
+          # "no record found" errors on first run and works across all branches.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # ─── Job 2: Deploy to Railway ─────────────────────────────────────────────────
   deploy:
@@ -72,9 +79,6 @@ jobs:
     environment: production
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Deploy to Railway
         run: |
           curl -X POST \
