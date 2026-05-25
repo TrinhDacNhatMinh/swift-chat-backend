@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { ChatGateway } from './chat.gateway';
+import { ChatGateway, websocketCorsOrigin } from './chat.gateway';
 import { ChatService } from './chat.service';
 import { UserService } from '../user/user.service';
 import {
@@ -428,6 +428,96 @@ describe('ChatGateway', () => {
       await gateway.handleHeartbeat(client as any);
 
       expect(redis.expire).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // CORS Origin Verification
+  // =========================================================================
+  describe('CORS Origin Callback', () => {
+    let originChecker: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => void;
+
+    beforeEach(() => {
+      originChecker = websocketCorsOrigin;
+    });
+
+    it('should be defined as a function', () => {
+      expect(originChecker).toBeInstanceOf(Function);
+    });
+
+    it('should allow requests without an origin header (e.g. server-to-server)', () => {
+      const callback = jest.fn();
+      originChecker(undefined, callback);
+      expect(callback).toHaveBeenCalledWith(null, true);
+    });
+
+    describe('when CORS_ORIGIN is set', () => {
+      const originalEnv = process.env;
+
+      beforeEach(() => {
+        jest.resetModules();
+        process.env = { ...originalEnv, CORS_ORIGIN: 'https://allowed1.com, https://allowed2.com' };
+      });
+
+      afterEach(() => {
+        process.env = originalEnv;
+      });
+
+      it('should allow origin matching any of the configured domains', () => {
+        const callback = jest.fn();
+        originChecker('https://allowed1.com', callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+
+        const callback2 = jest.fn();
+        originChecker('https://allowed2.com', callback2);
+        expect(callback2).toHaveBeenCalledWith(null, true);
+      });
+
+      it('should deny origin not matching the configured domains', () => {
+        const callback = jest.fn();
+        originChecker('https://malicious.com', callback);
+        expect(callback).toHaveBeenCalledWith(null, false);
+      });
+    });
+
+    describe('when CORS_ORIGIN is not set', () => {
+      const originalEnv = process.env;
+
+      afterEach(() => {
+        process.env = originalEnv;
+      });
+
+      it('should allow localhost in non-production environments', () => {
+        process.env = { ...originalEnv, NODE_ENV: 'development', CORS_ORIGIN: '' };
+        const callback = jest.fn();
+        originChecker('http://localhost:3000', callback);
+        expect(callback).toHaveBeenCalledWith(null, true);
+
+        const callback2 = jest.fn();
+        originChecker('https://localhost', callback2);
+        expect(callback2).toHaveBeenCalledWith(null, true);
+      });
+
+      it('should block non-localhost in non-production environments', () => {
+        process.env = { ...originalEnv, NODE_ENV: 'development', CORS_ORIGIN: '' };
+        const callback = jest.fn();
+        originChecker('https://external-domain.com', callback);
+        expect(callback).toHaveBeenCalledWith(null, false);
+      });
+
+      it('should block all origins in production environment when CORS_ORIGIN is empty', () => {
+        process.env = { ...originalEnv, NODE_ENV: 'production', CORS_ORIGIN: '' };
+        const callback = jest.fn();
+        originChecker('https://any-domain.com', callback);
+        expect(callback).toHaveBeenCalledWith(null, false);
+
+        const callback2 = jest.fn();
+        originChecker('http://localhost:3000', callback2);
+        expect(callback2).toHaveBeenCalledWith(null, false);
+      });
     });
   });
 });

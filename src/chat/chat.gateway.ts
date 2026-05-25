@@ -34,6 +34,29 @@ import { DeleteMessageDto } from './dto/delete-message.dto';
 import { EditMessageDto } from './dto/edit-message.dto';
 import { MarkReadDto } from './dto/mark-read.dto';
 import { ReactMessageDto } from './dto/react-message.dto';
+export const websocketCorsOrigin = (
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+) => {
+  const rawOrigin = process.env.CORS_ORIGIN || '';
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // No origin header (e.g. server-to-server) — allow
+  if (!origin) return callback(null, true);
+
+  if (rawOrigin) {
+    const allowed = rawOrigin.split(',').map((o) => o.trim());
+    return callback(null, allowed.includes(origin));
+  }
+
+  if (!isProd) {
+    // Development/test: allow any localhost
+    return callback(null, /^https?:\/\/localhost(:\d+)?$/.test(origin));
+  }
+
+  // Production without explicit CORS_ORIGIN → block
+  return callback(null, false);
+};
 
 const REDIS_PRESENCE_PREFIX = 'presence:';
 const REDIS_CONNECTION_COUNT_PREFIX = 'conn_count:';
@@ -42,9 +65,7 @@ const PRESENCE_TTL_SECONDS = 120;
 @WebSocketGateway({
   namespace: '/chat',
   cors: {
-    origin: process.env.CORS_ORIGIN
-      ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-      : /^https?:\/\/localhost(:\d+)?$/,
+    origin: websocketCorsOrigin,
     credentials: true,
   },
 })
