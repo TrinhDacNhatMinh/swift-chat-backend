@@ -57,6 +57,8 @@ model RefreshToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
@@ -69,6 +71,8 @@ model Friend {
   user1 User @relation("FriendUser1", fields: [userId1], references: [id])
   user2 User @relation("FriendUser2", fields: [userId2], references: [id])
 
+  @@index([userId1])
+  @@index([userId2])
   @@map("friends")
 }
 
@@ -84,6 +88,7 @@ model FriendRequest {
   receiver User @relation("ReceivedRequests", fields: [receiverId], references: [id])
 
   @@unique([senderId, receiverId])
+  @@index([receiverId, status])
   @@map("friend_requests")
 }
 
@@ -114,6 +119,7 @@ model Participant {
   user         User         @relation(fields: [userId], references: [id])
 
   @@unique([conversationId, userId])
+  @@index([userId])
   @@map("participants")
 }
 
@@ -129,6 +135,7 @@ model Notification {
   user  User @relation("NotificationUser", fields: [userId], references: [id])
   actor User @relation("NotificationActor", fields: [actorId], references: [id])
 
+  @@index([userId, isRead])
   @@map("notifications")
 }
 
@@ -141,5 +148,6 @@ model DeviceToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("device_tokens")
 }
