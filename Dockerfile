@@ -9,8 +9,6 @@ WORKDIR /app
 # Enable corepack so the pnpm version from package.json is used exactly
 RUN corepack enable
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
 # Install all dependencies (dev + prod) for the build stage
 RUN pnpm install --frozen-lockfile
 
@@ -52,13 +50,12 @@ RUN corepack enable
 
 # Install only production dependencies in the final image
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile --prod
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
 # Copy Prisma schema + generated client for runtime & migrate deploy
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules ./node_modules
 COPY prisma ./prisma
 
 # Run as non-root for security
