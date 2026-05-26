@@ -81,6 +81,7 @@ jobs:
           # "no record found" errors on first run and works across all branches.
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
   # ─── Job 2: Deploy to Staging (dev branch) ───────────────────────────────────
   deploy-staging:
