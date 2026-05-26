@@ -32,6 +32,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client for linux/alpine target
+ENV NODE_ENV=production
 ENV POSTGRESQL=postgresql://dummy:dummy@localhost:5432/dummy
 RUN pnpm exec prisma generate
 
