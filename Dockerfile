@@ -34,7 +34,8 @@ COPY . .
 # Generate Prisma client for linux/alpine target
 ENV NODE_ENV=production
 ENV POSTGRESQL=postgresql://dummy:dummy@localhost:5432/dummy
-RUN pnpm exec prisma generate --schema=./prisma/schema.prisma
+RUN pnpm exec prisma generate --schema=./prisma/schema.prisma && \
+    ls -la node_modules/.prisma || echo "PRISMA NOT FOUND"
 
 # Compile TypeScript → /app/dist
 RUN pnpm build
