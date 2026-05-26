@@ -17,9 +17,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # github.repository may contain uppercase letters (e.g. TrinhDacNhatMinh/...).
-  # Docker registry requires fully lowercase names — resolved in a dedicated step below.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   # ─── Job 1: Build & Push Docker Image ────────────────────────────────────────
