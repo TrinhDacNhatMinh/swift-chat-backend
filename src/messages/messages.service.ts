@@ -175,14 +175,14 @@ export class MessagesService {
     let result = await this.messageModel.findOneAndUpdate(
       { _id: new Types.ObjectId(messageId), sender_id: senderId },
       { is_deleted: true, deleted_at: new Date() }, // Preserve content for audit trail
-      { new: true },
+      { returnDocument: 'after' },
     );
     
     if (!result) {
       result = await this.messageArchiveModel.findOneAndUpdate(
         { _id: new Types.ObjectId(messageId), sender_id: senderId },
         { is_deleted: true, deleted_at: new Date() },
-        { new: true },
+        { returnDocument: 'after' },
       );
     }
     return result;
@@ -200,10 +200,10 @@ export class MessagesService {
     };
     const update = { content: newContent, is_edited: true };
     
-    let result = await this.messageModel.findOneAndUpdate(query, update, { new: true });
+    let result = await this.messageModel.findOneAndUpdate(query, update, { returnDocument: 'after' });
     
     if (!result) {
-      result = await this.messageArchiveModel.findOneAndUpdate(query, update, { new: true });
+      result = await this.messageArchiveModel.findOneAndUpdate(query, update, { returnDocument: 'after' });
     }
     return result;
   }
@@ -236,7 +236,7 @@ export class MessagesService {
       return model.findOneAndUpdate(
         { _id: new Types.ObjectId(messageId) },
         { $pull: { reactions: { userId, emoji } } },
-        { new: true },
+        { returnDocument: 'after' },
       );
     } else {
       // Add reaction. Try hot collection first.
@@ -247,7 +247,7 @@ export class MessagesService {
             reactions: { emoji, userId, createdAt: new Date() },
           },
         },
-        { new: true },
+        { returnDocument: 'after' },
       );
       
       if (!result) {
@@ -259,7 +259,7 @@ export class MessagesService {
               reactions: { emoji, userId, createdAt: new Date() },
             },
           },
-          { new: true },
+          { returnDocument: 'after' },
         );
       }
       

@@ -136,7 +136,7 @@ describe('MessagesService', () => {
           is_deleted: true,
           deleted_at: expect.any(Date),
         }),
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual(deleted);
     });
@@ -170,7 +170,7 @@ describe('MessagesService', () => {
       expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
         expect.objectContaining({ sender_id: 'u1', is_deleted: false }),
         expect.objectContaining({ content: 'updated', is_edited: true }),
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual(edited);
     });
@@ -285,7 +285,7 @@ describe('MessagesService', () => {
       expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ $push: expect.any(Object) }),
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual(updated);
     });
@@ -301,7 +301,7 @@ describe('MessagesService', () => {
       expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({ $pull: expect.any(Object) }),
-        { new: true },
+        { returnDocument: 'after' },
       );
       expect(result).toEqual(updated);
     });
