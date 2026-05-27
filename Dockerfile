@@ -44,6 +44,7 @@ RUN corepack enable
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
 
 USER node
 
