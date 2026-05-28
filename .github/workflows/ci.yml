@@ -2,15 +2,16 @@ name: CI
 
 on:
   push:
-    branches: ["dev", "main"]
+    branches: ["develop", "staging", "main"]
   pull_request:
-    branches: ["dev", "main"]
+    branches: ["develop", "staging", "main"]
 
 jobs:
   # ─── Job 1: Lint & Unit Tests ────────────────────────────────────────────────
   lint-and-unit:
     name: Lint & Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +39,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+
       - name: Generate Prisma Client
+        # prisma generate does not connect to DB; mock URL satisfies env validation only
         env:
           POSTGRESQL: postgresql://localhost:5432/mock
         run: pnpm exec prisma generate
@@ -61,6 +66,8 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    needs: lint-and-unit
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -94,6 +101,11 @@ jobs:
           MONGO_INITDB_ROOT_PASSWORD: rootpassword
         ports:
           - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
@@ -139,9 +151,10 @@ jobs:
           MONGODB_URI: mongodb://root:rootpassword@localhost:27017/swift_chat_test?authSource=admin
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-          JWT_ACCESS_SECRET: github-action-test-access-secret-min16chars
+          # test-only secrets — do not use in production
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET || 'github-action-test-access-secret-min16chars' }}
           JWT_ACCESS_EXPIRES_IN: 1h
-          JWT_REFRESH_SECRET: github-action-test-refresh-secret-min16chars
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET || 'github-action-test-refresh-secret-min16chars' }}
           JWT_REFRESH_EXPIRES_IN: 7d
           CORS_ORIGIN: ""
           THROTTLE_TTL: 60000
