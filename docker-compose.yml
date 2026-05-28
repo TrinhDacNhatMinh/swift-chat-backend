@@ -2,11 +2,9 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: swift_chat_postgres
-    restart: always
-    environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: rootpassword
-      POSTGRES_DB: swift_chat
+    restart: "no"
+    env_file:
+      - ${ENV_FILE:-.env.development}
     ports:
       - "5432:5432"
     volumes:
@@ -20,10 +18,9 @@ services:
   mongodb:
     image: mongo:6
     container_name: swift_chat_mongodb
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+    restart: "no"
+    env_file:
+      - ${ENV_FILE:-.env.development}
     ports:
       - "27017:27017"
     volumes:
@@ -37,7 +34,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: swift_chat_redis
-    restart: always
+    restart: "no"
     ports:
       - "6379:6379"
     volumes:

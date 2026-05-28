@@ -61,6 +61,7 @@ export const envValidationSchema = Joi.object({
 export const configModuleOptions = {
   isGlobal: true,
   envFilePath: getEnvFilePath(),
+  expandVariables: true,
   validationSchema: envValidationSchema,
   validationOptions: {
     allowUnknown: true,
