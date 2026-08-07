@@ -48,16 +48,22 @@ WORKDIR /app
 
 RUN corepack enable
 
-# Install only production dependencies in the final image
+# Install production dependencies
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy Prisma schema + generated client for runtime & migrate deploy
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy prisma schema
 COPY prisma ./prisma
+
+# Generate Prisma client for runtime (safest way to avoid pnpm symlink issues)
+# We also install prisma CLI temporarily to run generate, and it'll be available for migrate deploy
+RUN pnpm add prisma@^7.8.0 && pnpm exec prisma generate
+
+# Change ownership to node user for security
+RUN chown -R node:node /app
 
 # Run as non-root for security
 USER node
@@ -67,4 +73,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # On startup: apply pending migrations, then start the server
-CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
