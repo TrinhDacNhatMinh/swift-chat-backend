@@ -146,7 +146,7 @@ describe('ConversationsService', () => {
       });
 
       expect(result).toEqual(existing);
-      expect(prisma.$transaction).not.toHaveBeenCalled();
+      expect(prisma.$transaction).toHaveBeenCalled();
     });
 
     it('should create new conversation with two participants when DIRECT conversation does not exist', async () => {

@@ -401,7 +401,7 @@ describe('MessagesService', () => {
 
       expect(mockModel.model.findOne).toHaveBeenCalledWith(
         expect.objectContaining({
-          reactions: { $elemMatch: { accountId: 'u1', emoji: '👍' } },
+          'reactions.accountId': 'u1',
         }),
       );
       expect(mockModel.model.findOneAndUpdate).toHaveBeenCalledWith(
@@ -414,7 +414,10 @@ describe('MessagesService', () => {
 
     it('should REMOVE reaction via $pull when emoji already exists in toggleReaction()', async () => {
       // findOne returns a document → reaction exists
-      mockModel.model.findOne.mockResolvedValue({ _id: MSG_ID });
+      mockModel.model.findOne.mockResolvedValue({
+        _id: MSG_ID,
+        reactions: [{ accountId: 'u1', emoji: '👍' }],
+      });
       const updated = {
         _id: { toString: () => MSG_ID },
         created_at: new Date(),

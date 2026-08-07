@@ -371,7 +371,7 @@ export class MessagesService {
         // First pull any existing reactions from this user to clean up duplicates
         await model.updateOne(
           { _id: new Types.ObjectId(messageId) },
-          { $pull: { reactions: { accountId } } }
+          { $pull: { reactions: { accountId } } },
         );
         // Then push the new reaction
         const updated = await model.findOneAndUpdate(
