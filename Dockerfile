@@ -55,8 +55,9 @@ RUN pnpm install --frozen-lockfile --prod
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy prisma schema
+# Copy prisma schema & config
 COPY prisma ./prisma
+COPY prisma.config.ts ./
 
 # Generate Prisma client for runtime (safest way to avoid pnpm symlink issues)
 # We also install prisma CLI temporarily to run generate, and it'll be available for migrate deploy
