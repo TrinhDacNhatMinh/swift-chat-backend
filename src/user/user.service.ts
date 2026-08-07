@@ -330,8 +330,6 @@ export class UserService {
       avatarUrl: profile.avatarUrl,
       coverUrl: profile.coverUrl,
       bio: profile.bio,
-      website: profile.website,
-      location: profile.location,
       email: account.email,
       isEmailVerified: account.isEmailVerified,
       createdAt: account.createdAt,

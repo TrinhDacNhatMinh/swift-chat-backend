@@ -24,14 +24,4 @@ export class UpdateProfileDto {
   @IsString()
   @MaxLength(150)
   bio?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  website?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  location?: string;
 }

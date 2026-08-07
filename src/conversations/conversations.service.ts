@@ -140,7 +140,7 @@ export class ConversationsService {
         this.prisma.conversation.update({
           where: { id: existingParticipant.conversation.id },
           data: { updatedAt: new Date() },
-        })
+        }),
       ]);
 
       return {

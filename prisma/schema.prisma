@@ -70,8 +70,6 @@ model Profile {
   avatarUrl   String?  @map("avatar_url")
   coverUrl    String?  @map("cover_url")
   bio         String?  @db.VarChar(150)
-  website     String?  @db.VarChar(255)
-  location    String?  @db.VarChar(100)
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 

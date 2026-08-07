@@ -7,8 +7,6 @@ export class UserResponseDto {
   avatarUrl: string | null;
   coverUrl?: string | null;
   bio?: string | null;
-  website?: string | null;
-  location?: string | null;
   isOnline?: boolean;
   isEmailVerified: boolean;
   lastSeen: Date | null;
@@ -22,8 +20,6 @@ export class PublicUserProfileDto {
   avatarUrl: string | null;
   coverUrl?: string | null;
   bio?: string | null;
-  website?: string | null;
-  location?: string | null;
   isOnline?: boolean;
   lastSeen: Date | null;
   createdAt: Date;

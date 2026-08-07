@@ -112,8 +112,6 @@ export class UserController {
       avatarUrl: profile.avatarUrl,
       coverUrl: profile.coverUrl,
       bio: profile.bio,
-      website: profile.website,
-      location: profile.location,
       lastSeen: profile.lastSeen,
       createdAt: profile.createdAt,
     };
@@ -140,8 +138,6 @@ export class UserController {
       avatarUrl: profile.avatarUrl,
       coverUrl: profile.coverUrl,
       bio: profile.bio,
-      website: profile.website,
-      location: profile.location,
       lastSeen: profile.lastSeen,
       createdAt: profile.createdAt,
     };
