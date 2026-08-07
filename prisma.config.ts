@@ -3,13 +3,13 @@ import { loadEnvFile } from './config/env';
 
 loadEnvFile();
 
-const databaseUrl = process.env.POSTGRESQL;
-if (!databaseUrl) throw new Error('POSTGRESQL environment variable is not set');
+// Provide a dummy connection string during Docker build (when env vars are not yet available)
+const databaseUrl = process.env.POSTGRESQL || 'postgresql://dummy:dummy@localhost:5432/dummy';
 
 export default defineConfig({
   schema: './prisma/schema.prisma',
   migrations: {
-    seed: 'ts-node ./prisma/seed-frontend.ts',
+    seed: 'ts-node ./prisma/scripts/seed-frontend.ts',
   },
   datasource: {
     url: databaseUrl,
